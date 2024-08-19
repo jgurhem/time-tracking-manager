@@ -38,7 +38,7 @@ struct Entry {
     #[serde(rename = "timeInterval")]
     time_interval: TimeInterval,
     #[serde(default)]
-    tags: Vec<String>,
+    tags: Vec<Tag>,
     #[serde(default)]
     task: Task,
 }
@@ -51,7 +51,7 @@ impl Entry {
             billable: self.billable,
             project: self.project.name.clone(),
             task: self.task.name.clone(),
-            tags: self.tags.clone(),
+            tags: self.tags.clone().into_iter().map(|t| {t.name.clone()}).collect(),
             end: DateTime::parse_from_rfc3339(&self.time_interval.end)
                 .unwrap()
                 .to_utc(),
@@ -80,6 +80,12 @@ struct Task {
 }
 
 impl Provider for Clockify {
+#[derive(Deserialize, Debug, Default, Clone)]
+struct Tag {
+    #[serde(default)]
+    name: String,
+}
+
     async fn load(
         &mut self,
         start: DateTime<Utc>,
