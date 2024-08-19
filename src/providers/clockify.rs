@@ -9,12 +9,12 @@ use serde_json;
 use std::error::Error;
 
 #[derive(Debug)]
-pub struct Clockify {
-    token: String,
+pub struct Clockify <'a> {
+    token: &'a str,
 }
 
-impl Clockify {
-    pub fn new(token: String) -> Clockify {
+impl <'a>  Clockify <'a>  {
+    pub fn new(token: &'a str) -> Clockify<'a> {
         Clockify { token }
     }
 }
@@ -79,13 +79,13 @@ struct Task {
     name: String,
 }
 
-impl Provider for Clockify {
 #[derive(Deserialize, Debug, Default, Clone)]
 struct Tag {
     #[serde(default)]
     name: String,
 }
 
+impl Provider for Clockify<'_> {
     async fn load(
         &mut self,
         start: DateTime<Utc>,
