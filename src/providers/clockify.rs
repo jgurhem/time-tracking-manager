@@ -118,7 +118,7 @@ struct Tag {
 
         let mut page = 1;
         loop {
-            let req = client.get(format!("{base}/workspaces/{workspace}/user/{user}/time-entries?start={start}&end={end}&hydrated=true&page={page}&page-size=1")).build()?;
+            let req = client.get(format!("{base}/workspaces/{workspace}/user/{user}/time-entries?start={start}&end={end}&hydrated=true&page={page}&page-size=100")).build()?;
             let body = client.execute(req).await?.text().await?;
             // remove task:null that serde is not able to parse
             let body = body.replace("\"task\":null,", "");
