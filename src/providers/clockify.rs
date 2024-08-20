@@ -91,7 +91,7 @@ struct Tag {
 }
 
 impl Provider for Clockify<'_> {
-    async fn load(
+    fn load(
         &mut self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
@@ -106,16 +106,16 @@ impl Provider for Clockify<'_> {
         headers.append("X-Api-Key", HeaderValue::from_str(&self.token)?);
 
         let base = "https://api.clockify.me/api/v1";
-        let client = reqwest::Client::builder()
+        let client = reqwest::blocking::Client::builder()
             .default_headers(headers)
             .build()?;
 
         let req = client.get(format!("{base}/workspaces")).build()?;
-        let workspace = client.execute(req).await?.json::<Vec<Workspace>>().await?;
+        let workspace = client.execute(req)?.json::<Vec<Workspace>>()?;
         let workspace = &workspace.first().unwrap().id;
 
         let req = client.get(format!("{base}/user")).build()?;
-        let user = client.execute(req).await?.json::<User>().await?.id;
+        let user = client.execute(req)?.json::<User>()?.id;
 
         let format = "%Y-%m-%dT%H:%M:%SZ";
         let start = start.format(&format).to_string();
@@ -124,7 +124,7 @@ impl Provider for Clockify<'_> {
         let mut page = 1;
         loop {
             let req = client.get(format!("{base}/workspaces/{workspace}/user/{user}/time-entries?start={start}&end={end}&hydrated=true&page={page}&page-size=100")).build()?;
-            let body = client.execute(req).await?.text().await?;
+            let body = client.execute(req)?.text()?;
             if body.is_empty() {
                 break;
             }

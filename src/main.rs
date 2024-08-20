@@ -7,13 +7,12 @@ use time_tracking_manager::{
     renamers::Renames,
 };
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     dbg!(&args);
 
     let mut c = Clockify::new(args.token.as_str());
-    let entries = c.load(args.start, args.end).await?;
+    let entries = c.load(args.start, args.end)?;
 
     let param = FilterParam::build(&args);
     let renames = Renames::build(&args).unwrap();

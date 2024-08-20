@@ -9,7 +9,7 @@ pub trait Provider {
         &mut self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
-    ) -> impl std::future::Future<Output = Result<Vec<Entry>, Box<dyn Error>>> + Send;
+    ) -> Result<Vec<Entry>, Box<dyn Error>>;
 }
 
 pub mod clockify;
