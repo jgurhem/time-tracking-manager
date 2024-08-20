@@ -40,7 +40,7 @@ struct Entry {
     #[serde(default)]
     tags: Vec<Tag>,
     #[serde(default)]
-    task: Task,
+    task: Option<Task>,
 }
 
 impl Entry {
@@ -50,7 +50,7 @@ impl Entry {
             description: self.description.clone(),
             billable: self.billable,
             project: self.project.name.clone(),
-            task: self.task.name.clone(),
+            task: self.task.as_ref().cloned().unwrap_or_default().name,
             tags: self.tags.clone().into_iter().map(|t| {t.name.clone()}).collect(),
             end: DateTime::parse_from_rfc3339(&self.time_interval.end)
                 .unwrap()
@@ -73,7 +73,7 @@ struct TimeInterval {
     end: String,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 struct Task {
     #[serde(default)]
     name: String,
@@ -120,8 +120,6 @@ impl Provider for Clockify<'_> {
         loop {
             let req = client.get(format!("{base}/workspaces/{workspace}/user/{user}/time-entries?start={start}&end={end}&hydrated=true&page={page}&page-size=100")).build()?;
             let body = client.execute(req).await?.text().await?;
-            // remove task:null that serde is not able to parse
-            let body = body.replace("\"task\":null,", "");
             if body.is_empty() {
                 break;
             }
