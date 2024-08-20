@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, TimeDelta};
+use chrono::{DateTime, TimeDelta, Utc};
 
 #[derive(Debug, PartialEq)]
 pub struct Entry {
@@ -8,10 +8,9 @@ pub struct Entry {
     pub project: String,
     pub task: String,
     pub tags: Vec<String>,
-    pub end : DateTime<Utc>,
-    pub start : DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub start: DateTime<Utc>,
 }
-
 
 impl Entry {
     fn duration(self) -> TimeDelta {

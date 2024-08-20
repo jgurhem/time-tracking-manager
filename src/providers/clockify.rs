@@ -9,11 +9,11 @@ use serde_json;
 use std::error::Error;
 
 #[derive(Debug)]
-pub struct Clockify <'a> {
+pub struct Clockify<'a> {
     token: &'a str,
 }
 
-impl <'a>  Clockify <'a>  {
+impl<'a> Clockify<'a> {
     pub fn new(token: &'a str) -> Clockify<'a> {
         Clockify { token }
     }
@@ -51,7 +51,12 @@ impl Entry {
             billable: self.billable,
             project: self.project.name.clone(),
             task: self.task.as_ref().cloned().unwrap_or_default().name,
-            tags: self.tags.clone().into_iter().map(|t| {t.name.clone()}).collect(),
+            tags: self
+                .tags
+                .clone()
+                .into_iter()
+                .map(|t| t.name.clone())
+                .collect(),
             end: DateTime::parse_from_rfc3339(&self.time_interval.end)
                 .unwrap()
                 .to_utc(),
