@@ -1,6 +1,6 @@
 use std::error::Error;
 use clap::Parser;
-use time_tracking_manager::{args::Args, filters::{predicate_filter, FilterParam}, providers::{clockify::Clockify, Provider}};
+use time_tracking_manager::{args::Args, filters::{predicate_filter, FilterParam}, providers::{clockify::Clockify, Provider}, renamers::Renames};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -11,7 +11,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let entries = c.load(args.start, args.end).await?;
 
     let param = FilterParam::build(&args);
-    let entries = entries.into_iter().filter(|x| { predicate_filter(&x, &param) });
+    let renames = Renames::build(&args).unwrap();
+    let entries = entries.into_iter().filter(|x| { predicate_filter(&x, &param) }).map(|x| {
+        renames.predicate_rename(x)
+    });
 
     for e in entries {
         println!("entry {:?}", e);

@@ -47,4 +47,8 @@ pub struct Args {
     /// Projects and tasks to ignore during computations. 'Project' ignores all tasks from the project. 'Project___' ignores empty tasks. 'Project___Task' ignore the given task.
     #[arg(short('I'), long, default_values_t = empty_string_vec())]
     pub ignore_list: Vec<String>,
+
+    /// 'Project1___Task1=Project2___Task2' allows to rename Project1 Task1 into Project2 Task2 before Tabler step
+    #[arg(short, long, default_values_t = empty_string_vec())]
+    pub rename: Vec<String>,
 }
