@@ -1,4 +1,6 @@
-use chrono::{DateTime, TimeDelta, Utc};
+use std::fmt::Debug;
+
+use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Utc};
 
 #[derive(Debug, PartialEq)]
 pub struct Entry {
@@ -13,7 +15,23 @@ pub struct Entry {
 }
 
 impl Entry {
-    fn duration(self) -> TimeDelta {
+    pub fn duration(&self) -> TimeDelta {
         self.end - self.start
+    }
+
+    pub fn to_project___task(&self) -> String {
+        format!("{}___{}", &self.project, &self.task)
+    }
+
+    pub fn get_start_day(&self) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(
+            self.start.year(),
+            self.start.month(),
+            self.start.day(),
+            0,
+            0,
+            0,
+        )
+        .unwrap()
     }
 }

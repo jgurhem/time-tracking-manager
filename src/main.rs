@@ -2,9 +2,11 @@ use clap::Parser;
 use std::error::Error;
 use time_tracking_manager::{
     args::Args,
+    entries::Entry,
     filters::{predicate_filter, FilterParam},
     providers::{clockify::Clockify, Provider},
     renamers::Renames,
+    tablers::{proportional::Proportional, Tabler},
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -16,14 +18,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let param = FilterParam::build(&args);
     let renames = Renames::build(&args).unwrap();
-    let entries = entries
+    let entries: Vec<Entry> = entries
         .into_iter()
         .filter(|x| predicate_filter(&x, &param))
-        .map(|x| renames.predicate_rename(x));
+        .map(|x| renames.predicate_rename(x))
+        .collect();
 
-    for e in entries {
+    for e in &entries {
         println!("entry {:?}", e);
     }
 
+    let result = Proportional::process(entries);
     Ok(())
 }
