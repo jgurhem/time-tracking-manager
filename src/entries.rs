@@ -20,7 +20,11 @@ impl Entry {
     }
 
     pub fn to_project___task(&self) -> String {
-        format!("{}___{}", &self.project, &self.task)
+        if self.task == ""{
+            self.project.to_string().clone()
+        }else {
+            format!("{}___{}", &self.project, &self.task)
+        }
     }
 
     pub fn get_start_day(&self) -> DateTime<Utc> {
