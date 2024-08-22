@@ -20,14 +20,10 @@ fn group_by_month(
             .with_ymd_and_hms(h.year(), h.month(), 1, 0, 0, 0)
             .unwrap();
 
-        if groups.contains_key(&m) {
-            groups
-                .get_mut(&m)
-                .expect("Item should be present because we checked it before")
-                .push(h.clone());
-        } else {
-            groups.insert(m, vec![h.clone()]);
-        }
+        groups
+            .entry(m)
+            .and_modify(|e| e.push(h.clone()))
+            .or_insert(vec![h.clone()]);
     }
 
     groups
