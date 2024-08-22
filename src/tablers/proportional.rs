@@ -1,16 +1,20 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug, fmt::Display, marker::PhantomData};
 
 use chrono::{DateTime, TimeDelta, Utc};
 
 use super::{MyTable, Table, Tabler};
 
-pub struct Proportional {}
+pub struct Proportional<T> {
+    p: PhantomData<T>,
+}
 
 ///
 /// Compute table containing the daily sum for each entry related to same project and task divided by the sum of entries
-/// 
-impl<'a> Tabler<'a> for Proportional {
-    type Table = MyTable<u8>
+///
+impl<'a, T: Display + Clone + Default + TryFrom<i64, Error: Debug> + 'a> Tabler<'a>
+    for Proportional<T>
+{
+    type Table = MyTable<T>
     where
         Self: 'a;
 
@@ -47,8 +51,8 @@ impl<'a> Tabler<'a> for Proportional {
                     continue;
                 }
                 let v = 100 * x.num_seconds() / days.get(d).unwrap().num_seconds();
-                println!("{s} {d} {v}");
-                table.insert(s.to_string(), *d, v.try_into().unwrap());
+                let v = T::try_from(v).unwrap();
+                table.insert(s.to_string(), *d, v);
             }
         }
 

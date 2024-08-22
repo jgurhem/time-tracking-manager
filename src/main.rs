@@ -3,6 +3,7 @@ use std::error::Error;
 use time_tracking_manager::{
     args::Args,
     entries::Entry,
+    exporters::{console::Console, Exporter},
     filters::{predicate_filter, FilterParam},
     providers::{clockify::Clockify, Provider},
     renamers::Renames,
@@ -29,5 +30,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let result = Proportional::process(entries);
+    Console::export(&result);
     Ok(())
 }
