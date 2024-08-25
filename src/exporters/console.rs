@@ -139,18 +139,18 @@ impl std::fmt::Display for FormattedTable {
         hsep.push('\n');
         let hsep = hsep.color(color);
         let vsep = "|".color(color);
-        f.write_fmt(format_args!("{}", &hsep))?;
+        write!(f, "{}", &hsep)?;
 
         for (i, s) in self.headers.iter().enumerate() {
             write!(f, "{0} {s:1$} ", &vsep, colsize[i])?;
         }
-        f.write_fmt(format_args!("{}\n{}", &vsep, &hsep))?;
+        write!(f, "{}\n{}", &vsep, &hsep)?;
 
         for row in &self.rows {
             for (i, s) in row.iter().enumerate() {
                 write!(f, "{0} {s:1$} ", &vsep, colsize[i])?;
             }
-            f.write_fmt(format_args!("{}\n{}", &vsep, &hsep))?;
+            write!(f, "{}\n{}", &vsep, &hsep)?;
         }
 
         Ok(())
