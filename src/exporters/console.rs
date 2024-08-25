@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 
@@ -12,8 +12,8 @@ pub struct Console {}
 
 fn group_by_month(
     headers: std::collections::hash_set::Iter<DateTime<Utc>>,
-) -> HashMap<DateTime<Utc>, Vec<DateTime<Utc>>> {
-    let mut groups: HashMap<DateTime<Utc>, Vec<DateTime<Utc>>> = HashMap::new();
+) -> BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> {
+    let mut groups: BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> = BTreeMap::new();
 
     for h in headers {
         let m = Utc
@@ -22,8 +22,8 @@ fn group_by_month(
 
         groups
             .entry(m)
-            .and_modify(|e| e.push(h.clone()))
-            .or_insert(vec![h.clone()]);
+            .and_modify(|e| {e.insert(h.clone());})
+            .or_insert([h.clone()].into_iter().collect());
     }
 
     groups
@@ -31,27 +31,27 @@ fn group_by_month(
 
 fn build_month_table(
     month: &DateTime<Utc>,
-    dates: &Vec<DateTime<Utc>>,
+    dates: &BTreeSet<DateTime<Utc>>,
     t: &MyTable<u8>,
 ) -> FormattedTable {
     let mut ptable = FormattedTable::new();
-    let mut dates = dates.clone();
     let ncol = dates.len() + 1;
-    dates.sort();
 
     let mut headers: Vec<String> = Vec::with_capacity(ncol);
     headers.push(month.format("%Y %m").to_string());
-    for d in &dates {
+    for d in dates {
         headers.push(d.day().to_string());
     }
     let headers = headers;
     ptable.set_header(headers);
 
-    for r in t.row_headers() {
+    let mut row_headers = t.row_headers().collect::<Vec<_>>();
+    row_headers.sort();
+    for r in row_headers {
         let mut row: Vec<String> = Vec::with_capacity(ncol);
         row.push(r.clone());
 
-        for d in &dates {
+        for d in dates {
             row.push(t.get(r.clone(), *d).to_string());
         }
         ptable.add_row(row);
