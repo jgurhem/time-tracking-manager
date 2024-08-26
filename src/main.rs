@@ -31,5 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let result = Proportional::process(entries);
     Console::export(&result);
+    CSV::export(&result);
     Ok(())
 }

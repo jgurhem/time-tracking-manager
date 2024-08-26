@@ -1,11 +1,11 @@
 pub mod proportional;
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     fmt::Display,
 };
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 
 use crate::entries::Entry;
 
@@ -23,6 +23,25 @@ pub trait Table {
     fn row_headers(&self) -> Self::RowIter<'_>;
     fn col_headers(&self) -> Self::ColIter<'_>;
     fn get(&self, row: String, col: DateTime<Utc>) -> Self::Item<'_>;
+
+    fn group_by_month(&self) -> BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> {
+        let mut groups: BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> = BTreeMap::new();
+
+        for h in self.col_headers() {
+            let m = Utc
+                .with_ymd_and_hms(h.year(), h.month(), 1, 0, 0, 0)
+                .unwrap();
+
+            groups
+                .entry(m)
+                .and_modify(|e| {
+                    e.insert(h.clone());
+                })
+                .or_insert([h.clone()].into_iter().collect());
+        }
+
+        groups
+    }
 }
 
 pub struct MyTable<T> {

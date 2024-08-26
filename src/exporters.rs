@@ -1,4 +1,5 @@
 pub mod console;
+pub mod csv;
 
 use std::fmt::Display;
 

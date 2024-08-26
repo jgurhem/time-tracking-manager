@@ -1,6 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
-use chrono::{DateTime, Datelike, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Utc};
 
 use colored::{Color, Colorize};
 
@@ -9,25 +9,6 @@ use crate::tablers::{MyTable, Table};
 use super::Exporter;
 
 pub struct Console {}
-
-fn group_by_month(
-    headers: std::collections::hash_set::Iter<DateTime<Utc>>,
-) -> BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> {
-    let mut groups: BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> = BTreeMap::new();
-
-    for h in headers {
-        let m = Utc
-            .with_ymd_and_hms(h.year(), h.month(), 1, 0, 0, 0)
-            .unwrap();
-
-        groups
-            .entry(m)
-            .and_modify(|e| {e.insert(h.clone());})
-            .or_insert([h.clone()].into_iter().collect());
-    }
-
-    groups
-}
 
 fn build_month_table(
     month: &DateTime<Utc>,
@@ -66,7 +47,7 @@ impl<'a> Exporter<'a> for Console {
         Self: 'a;
 
     fn export(table: &Self::Table) {
-        let months = group_by_month(table.col_headers());
+        let months = table.group_by_month();
 
         for (k, v) in months.iter() {
             println!("{}", build_month_table(&k, &v, table));
