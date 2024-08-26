@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use chrono::{DateTime, Datelike, Utc};
 
@@ -46,7 +46,7 @@ impl<'a> Exporter<'a> for Console {
     where
         Self: 'a;
 
-    fn export(table: &Self::Table) {
+    fn export(table: &Self::Table, _: &HashMap<String, String>) {
         let months = table.group_by_month();
 
         for (k, v) in months.iter() {

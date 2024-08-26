@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use crate::{args::Args, entries::Entry};
+use crate::{args::Args, entries::Entry, utils::{split___, split_eq}};
 
 struct RenameParam<'a> {
     p1: &'a str,
@@ -10,28 +10,10 @@ struct RenameParam<'a> {
 }
 
 impl<'a> RenameParam<'a> {
-    fn split___(s: &str) -> (&str, &str) {
-        let s: Vec<&str> = s.split("___").collect();
-        if s.len() == 1 {
-            (s[0], "")
-        } else {
-            (s[0], s[1])
-        }
-    }
-
-    fn split_eq(s: &str) -> Result<(&str, &str), Box<dyn Error>> {
-        let s: Vec<&str> = s.split("=").collect();
-        match s.len() {
-            2 => Ok((s[0], s[1])),
-            1 => Err(Box::from("Rename should have an = in the middle")),
-            _ => Err(Box::from("Rename should have only one = in the middle")),
-        }
-    }
-
     pub fn build(s: &str) -> Result<RenameParam, Box<dyn Error>> {
-        let (lhs, rhs) = Self::split_eq(&s)?;
-        let (p1, t1) = Self::split___(&lhs);
-        let (p2, t2) = Self::split___(&rhs);
+        let (lhs, rhs) = split_eq(&s)?;
+        let (p1, t1) = split___(&lhs);
+        let (p2, t2) = split___(&rhs);
         Ok(RenameParam { p1, p2, t1, t2 })
     }
 }

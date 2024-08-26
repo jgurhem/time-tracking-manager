@@ -1,13 +1,13 @@
 use clap::Parser;
-use std::error::Error;
+use std::{collections::HashMap, error::Error};
 use time_tracking_manager::{
     args::Args,
     entries::Entry,
-    exporters::{console::Console, Exporter},
+    exporters::{console::Console, csv::CSV, Exporter},
     filters::{predicate_filter, FilterParam},
     providers::{clockify::Clockify, Provider},
     renamers::Renames,
-    tablers::{proportional::Proportional, Tabler},
+    tablers::{proportional::Proportional, Tabler}, utils,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -30,7 +30,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let result = Proportional::process(entries);
-    Console::export(&result);
-    CSV::export(&result);
+    let mut display = HashMap::new();
+
+    for d in args.display.iter() {
+        let (k, v)=utils::split_eq(d).unwrap();
+        display.insert(k.to_string(), v.to_string());
+    }
+
+    Console::export(&result, &display);
+    CSV::export(&result, &display);
     Ok(())
 }

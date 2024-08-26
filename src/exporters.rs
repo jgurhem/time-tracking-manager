@@ -1,7 +1,7 @@
 pub mod console;
 pub mod csv;
 
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use serde::Serialize;
 
@@ -11,5 +11,5 @@ pub trait Exporter<'a> {
     type Table: Table<Item<'a>: Display + Serialize>
     where
         Self: 'a;
-    fn export(table: &Self::Table);
+    fn export(table: &Self::Table, display: &HashMap<String, String>);
 }

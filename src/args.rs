@@ -51,4 +51,8 @@ pub struct Args {
     /// 'Project1___Task1=Project2___Task2' allows to rename Project1 Task1 into Project2 Task2 before Tabler step
     #[arg(short, long, default_values_t = empty_string_vec())]
     pub rename: Vec<String>,
+
+    /// 'Project1___Task1=Display' allows to rename Project1 Task1 into Display during export step
+    #[arg(short, long, default_values_t = empty_string_vec())]
+    pub display: Vec<String>,
 }
