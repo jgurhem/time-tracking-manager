@@ -1,6 +1,10 @@
 use std::error::Error;
 
-use crate::{args::Args, entries::Entry, utils::{split___, split_eq}};
+use crate::{
+    args::Args,
+    entries::Entry,
+    utils::{split___, split_eq},
+};
 
 struct RenameParam<'a> {
     p1: &'a str,

@@ -20,9 +20,9 @@ impl Entry {
     }
 
     pub fn to_project___task(&self) -> String {
-        if self.task == ""{
+        if self.task == "" {
             self.project.to_string().clone()
-        }else {
+        } else {
             format!("{}___{}", &self.project, &self.task)
         }
     }

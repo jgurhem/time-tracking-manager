@@ -7,7 +7,8 @@ use time_tracking_manager::{
     filters::{predicate_filter, FilterParam},
     providers::{clockify::Clockify, Provider},
     renamers::Renames,
-    tablers::{proportional::Proportional, Tabler}, utils,
+    tablers::{proportional::Proportional, Tabler},
+    utils,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut display = HashMap::new();
 
     for d in args.display.iter() {
-        let (k, v)=utils::split_eq(d).unwrap();
+        let (k, v) = utils::split_eq(d).unwrap();
         display.insert(k.to_string(), v.to_string());
     }
 
