@@ -26,10 +26,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|x| renames.predicate_rename(x))
         .collect();
 
-    for e in &entries {
-        println!("entry {:?}", e);
-    }
-
     let result = Proportional::process(entries);
     let mut display = HashMap::new();
 
