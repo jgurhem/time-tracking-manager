@@ -11,12 +11,13 @@ use time_tracking_manager::{
     utils,
 };
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     dbg!(&args);
 
     let mut c = Clockify::new(args.token.as_str());
-    let entries = c.load(args.start, args.end)?;
+    let entries = c.load(args.start, args.end).await?;
 
     let param = FilterParam::build(&args);
     let renames = Renames::build(&args).unwrap();

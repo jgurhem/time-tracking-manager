@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use crate::entries::Entry;
 
 pub trait Provider {
-    fn load(
+    async fn load(
         &mut self,
         start: DateTime<Utc>,
         end: DateTime<Utc>,

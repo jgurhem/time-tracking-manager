@@ -1,5 +1,6 @@
 pub mod console;
 pub mod csv;
+pub mod progessi;
 
 use std::{collections::HashMap, fmt::Display};
 
