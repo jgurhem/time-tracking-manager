@@ -24,3 +24,5 @@ getrandom = { version = "0.2", features = ["js"] }
 tokio = { version = "1.40.0", features = ["macros", "rt"] }
 futures = "0.3.30"
 wasm-bindgen-futures = "0.4.43"
+console_error_panic_hook = "0.1.7"
+web-sys = { version = "0.3.70", features = ["console"] }

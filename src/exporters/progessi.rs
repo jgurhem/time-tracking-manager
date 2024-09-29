@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use clap::Parser;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
@@ -12,6 +11,8 @@ use crate::{
     tablers::{proportional::Proportional, MyTable, Table, Tabler},
     utils,
 };
+
+use web_sys::console::log_1;
 
 use super::Exporter;
 
@@ -30,9 +31,17 @@ impl<'a> Exporter<'a> for Progessi {
     }
 }
 
+// A macro to provide `println!(..)`-style syntax for `console.log` logging.
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        log_1(&format!( $( $t )* ).into());
+    }
+}
+
 #[wasm_bindgen]
 impl Progessi {
     pub fn new() -> Progessi {
+        console_error_panic_hook::set_once();
         Progessi { table: MyTable::new() }
     }
 
@@ -49,6 +58,10 @@ impl Progessi {
             .filter(|x| predicate_filter(&x, &param))
             .map(|x| renames.predicate_rename(x))
             .collect();
+
+        for e in &entries {
+            log!("{:?}", e);
+        }
 
         self.table = Proportional::process(entries);
         let mut display = HashMap::new();
