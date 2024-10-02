@@ -125,10 +125,10 @@ impl Provider for Clockify<'_> {
         loop {
             let req = client.get(format!("{base}/workspaces/{workspace}/user/{user}/time-entries?start={start}&end={end}&hydrated=true&page={page}&page-size=100")).build()?;
             let body = client.execute(req)?.text()?;
-            if body.is_empty() {
+            let res: Vec<Entry> = serde_json::from_str(&body).unwrap();
+            if body.is_empty() || res.len() == 0 {
                 break;
             }
-            let res: Vec<Entry> = serde_json::from_str(&body).unwrap();
             for e in res {
                 entries.push(e.convert());
             }
