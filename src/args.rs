@@ -16,10 +16,6 @@ fn end_month() -> DateTime<Utc> {
         .unwrap()
 }
 
-fn empty_string_vec() -> Vec<String> {
-    Vec::new()
-}
-
 #[derive(Parser, Debug, Serialize, Deserialize, PartialEq)]
 #[command(version, about, long_about = None)]
 pub struct Args {
@@ -48,17 +44,17 @@ pub struct Args {
     pub billable: bool,
 
     /// Projects and tasks to ignore during computations. 'Project' ignores all tasks from the project. 'Project___' ignores empty tasks. 'Project___Task' ignore the given task.
-    #[arg(short('I'), long, default_values_t = empty_string_vec())]
+    #[arg(short('I'), long, default_values_t = Vec::<String>::new())]
     #[serde(default)]
     pub ignore_list: Vec<String>,
 
     /// 'Project1___Task1=Project2___Task2' allows to rename Project1 Task1 into Project2 Task2 before Tabler step
-    #[arg(short, long, default_values_t = empty_string_vec())]
+    #[arg(short, long, default_values_t = Vec::<String>::new())]
     #[serde(default)]
     pub rename: Vec<String>,
 
     /// 'Project1___Task1=Display' allows to rename Project1 Task1 into Display during export step
-    #[arg(short, long, default_values_t = empty_string_vec())]
+    #[arg(short, long, default_values_t = Vec::<String>::new())]
     #[serde(default)]
     pub display: Vec<String>,
 }
@@ -80,9 +76,9 @@ impl Default for Args {
             end: end_month(),
             ignored: false,
             billable: false,
-            ignore_list: empty_string_vec(),
-            rename: empty_string_vec(),
-            display: empty_string_vec(),
+            ignore_list: Default::default(),
+            rename: Default::default(),
+            display: Default::default(),
         }
     }
 }
