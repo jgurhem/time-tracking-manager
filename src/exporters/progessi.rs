@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Datelike, TimeZone, Utc};
-use wasm_bindgen::prelude::wasm_bindgen;
+use chrono::{Datelike, TimeZone, Utc};
+use wasm_bindgen::{convert::FromWasmAbi, describe::WasmDescribe, prelude::wasm_bindgen, JsValue};
 
 use crate::{
     args::Args,
@@ -41,61 +41,31 @@ macro_rules! log {
     }
 }
 
-#[wasm_bindgen]
-pub struct PArgs {
-    token: String,
-    ignored: bool,
-    billable: bool,
-    ignore_list: Vec<String>,
-    rename: Vec<String>,
-    display: Vec<String>,
-}
 
-#[wasm_bindgen]
-impl PArgs {
-    pub fn new(
-        token: String,
-        ignored: bool,
-        billable: bool,
-        ignore_list: Vec<String>,
-        rename: Vec<String>,
-        display: Vec<String>,
-    ) -> PArgs {
-        PArgs {
-            token,
-            ignored,
-            billable,
-            ignore_list,
-            rename,
-            display,
-        }
+impl WasmDescribe for Args {
+    fn describe() {
+        <wasm_bindgen::JsValue as WasmDescribe>::describe();
     }
-
 }
 
-impl PArgs {
-    pub fn convert(&self
-    ) -> Args {
-        Args {
-            token : self.token.clone(),
-            ignored : self.ignored,
-            billable: self.billable,
-            ignore_list: self.ignore_list.clone(),
-            rename: self.rename.clone(),
-            display: self.display.clone(),
-            ..Default::default()
-        }
+impl FromWasmAbi for Args {
+    type Abi = <wasm_bindgen::JsValue as FromWasmAbi>::Abi;
+
+    #[inline]
+    unsafe fn from_abi(js: Self::Abi) -> Self {
+        let js = JsValue::from_abi(js);
+        serde_wasm_bindgen::from_value(js).unwrap()
     }
 }
 
 #[wasm_bindgen]
 impl Progessi {
-    pub fn new(args: PArgs) -> Progessi {
+    pub fn new(args: Args) -> Progessi {
         console_error_panic_hook::set_once();
         Progessi {
             table: MyTable::new(),
             display: HashMap::new(),
-            args : args.convert(),
+            args,
         }
     }
 

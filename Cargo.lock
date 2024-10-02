@@ -157,6 +157,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-targets 0.52.6",
 ]
@@ -263,6 +264,12 @@ checksum = "5efa2b3d7902f4b634a20cae3c9c4e6209dc4779feb6863329607560143efa70"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "describe"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6948ebb16e3fada9ec82a801f6ae1bb92b71857d61ef3a89d9d075f28ddd321b"
 
 [[package]]
 name = "errno"
@@ -951,6 +958,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.208"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1064,11 +1082,13 @@ dependencies = [
  "colored",
  "console_error_panic_hook",
  "csv",
+ "describe",
  "futures",
  "getrandom",
  "rand",
  "reqwest",
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "tokio",
  "wasm-bindgen",
