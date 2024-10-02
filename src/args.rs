@@ -1,4 +1,4 @@
-use chrono::{DateTime, Datelike, Days, Months, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Utc};
 use clap::Parser;
 
 fn start_month() -> DateTime<Utc> {
@@ -8,12 +8,10 @@ fn start_month() -> DateTime<Utc> {
 }
 
 fn end_month() -> DateTime<Utc> {
-    let utc = start_month()
+    start_month()
         .checked_add_months(Months::new(1))
         .unwrap()
-        .checked_sub_days(Days::new(1))
-        .unwrap();
-    Utc.with_ymd_and_hms(utc.year(), utc.month(), utc.day(), 0, 0, 0)
+        .checked_sub_signed(TimeDelta::milliseconds(1))
         .unwrap()
 }
 
