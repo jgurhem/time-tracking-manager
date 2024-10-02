@@ -54,3 +54,27 @@ pub struct Args {
     #[arg(short, long, default_values_t = empty_string_vec())]
     pub display: Vec<String>,
 }
+
+impl Args {
+    pub fn from_token(token: String) -> Args {
+        Args {
+            token,
+            ..Default::default()
+        }
+    }
+}
+
+impl Default for Args {
+    fn default() -> Self {
+        Self {
+            token: Default::default(),
+            start: start_month(),
+            end: end_month(),
+            ignored: false,
+            billable: false,
+            ignore_list: empty_string_vec(),
+            rename: empty_string_vec(),
+            display: empty_string_vec(),
+        }
+    }
+}

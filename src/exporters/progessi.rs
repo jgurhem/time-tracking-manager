@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
@@ -18,7 +19,9 @@ use super::Exporter;
 
 #[wasm_bindgen]
 pub struct Progessi {
-    table: MyTable<u8>
+    table: MyTable<u8>,
+    display: HashMap<String, String>,
+    args: Args,
 }
 
 impl<'a> Exporter<'a> for Progessi {
@@ -39,20 +42,69 @@ macro_rules! log {
 }
 
 #[wasm_bindgen]
-impl Progessi {
-    pub fn new() -> Progessi {
-        console_error_panic_hook::set_once();
-        Progessi { table: MyTable::new() }
+pub struct PArgs {
+    token: String,
+    ignored: bool,
+    billable: bool,
+    ignore_list: Vec<String>,
+    rename: Vec<String>,
+    display: Vec<String>,
+}
+
+#[wasm_bindgen]
+impl PArgs {
+    pub fn new(
+        token: String,
+        ignored: bool,
+        billable: bool,
+        ignore_list: Vec<String>,
+        rename: Vec<String>,
+        display: Vec<String>,
+    ) -> PArgs {
+        PArgs {
+            token,
+            ignored,
+            billable,
+            ignore_list,
+            rename,
+            display,
+        }
     }
 
-    pub async fn compute(&mut self) {
-        let args = Args::parse();
+}
 
-        let mut c = Clockify::new(args.token.as_str());
-        let entries = c.load(args.start, args.end).await.unwrap();
+impl PArgs {
+    pub fn convert(&self
+    ) -> Args {
+        Args {
+            token : self.token.clone(),
+            ignored : self.ignored,
+            billable: self.billable,
+            ignore_list: self.ignore_list.clone(),
+            rename: self.rename.clone(),
+            display: self.display.clone(),
+            ..Default::default()
+        }
+    }
+}
 
-        let param = FilterParam::build(&args);
-        let renames = Renames::build(&args).unwrap();
+#[wasm_bindgen]
+impl Progessi {
+    pub fn new(args: PArgs) -> Progessi {
+        console_error_panic_hook::set_once();
+        Progessi {
+            table: MyTable::new(),
+            display: HashMap::new(),
+            args : args.convert(),
+        }
+    }
+
+    pub async fn download(&mut self) {
+        let mut c = Clockify::new(self.args.token.as_str());
+        let entries = c.load(self.args.start, self.args.end).await.unwrap();
+
+        let param = FilterParam::build(&self.args);
+        let renames = Renames::build(&self.args).unwrap();
         let entries: Vec<Entry> = entries
             .into_iter()
             .filter(|x| predicate_filter(&x, &param))
@@ -64,11 +116,19 @@ impl Progessi {
         }
 
         self.table = Proportional::process(entries);
-        let mut display = HashMap::new();
 
-        for d in args.display.iter() {
+        for d in self.args.display.iter() {
             let (k, v) = utils::split_eq(d).unwrap();
-            display.insert(k.to_string(), v.to_string());
+            self.display.insert(k.to_string(), v.to_string());
         }
+    }
+
+    pub fn row_headers(&self) -> Vec<String> {
+        self.table.row_headers().cloned().collect()
+    }
+
+    pub fn get(&self, row:String, day:u32) -> u8 {
+        let day = Utc.with_ymd_and_hms(self.args.start.year(), self.args.start.month(), day, 0, 0, 0).unwrap();
+        self.table.get(row, day)
     }
 }
