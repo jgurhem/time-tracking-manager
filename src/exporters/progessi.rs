@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use chrono::{Datelike, TimeZone, Utc};
-use wasm_bindgen::{convert::FromWasmAbi, describe::WasmDescribe, prelude::wasm_bindgen, JsValue};
+use gloo::events::EventListener;
+use wasm_bindgen::{
+    convert::FromWasmAbi, describe::WasmDescribe, prelude::wasm_bindgen, JsCast, JsValue,
+};
 
 use crate::{
     args::Args,
@@ -13,7 +16,7 @@ use crate::{
     utils,
 };
 
-use web_sys::console::log_1;
+use web_sys::{console::log_1, Document, HtmlButtonElement};
 
 use super::Exporter;
 
@@ -22,6 +25,7 @@ pub struct Progessi {
     table: MyTable<u8>,
     display: HashMap<String, String>,
     args: Args,
+    document: Document,
 }
 
 impl<'a> Exporter<'a> for Progessi {
@@ -41,7 +45,6 @@ macro_rules! log {
     }
 }
 
-
 impl WasmDescribe for Args {
     fn describe() {
         <wasm_bindgen::JsValue as WasmDescribe>::describe();
@@ -60,12 +63,15 @@ impl FromWasmAbi for Args {
 
 #[wasm_bindgen]
 impl Progessi {
-    pub fn new(args: Args) -> Progessi {
+    pub fn new(args: Args, document: JsValue) -> Progessi {
         console_error_panic_hook::set_once();
         Progessi {
             table: MyTable::new(),
             display: HashMap::new(),
             args,
+            document: document
+                .dyn_into::<Document>()
+                .expect("input should be a document"),
         }
     }
 
@@ -97,8 +103,41 @@ impl Progessi {
         self.table.row_headers().cloned().collect()
     }
 
-    pub fn get(&self, row:String, day:u32) -> u8 {
-        let day = Utc.with_ymd_and_hms(self.args.start.year(), self.args.start.month(), day, 0, 0, 0).unwrap();
+    pub fn get(&self, row: String, day: u32) -> u8 {
+        let day = Utc
+            .with_ymd_and_hms(
+                self.args.start.year(),
+                self.args.start.month(),
+                day,
+                0,
+                0,
+                0,
+            )
+            .unwrap();
         self.table.get(row, day)
+    }
+
+    pub fn button(&self) {
+        let body = self
+            .document
+            .body()
+            .expect("document expect to have have a body");
+
+        let button = self
+            .document
+            .create_element("button")
+            .unwrap()
+            .dyn_into::<HtmlButtonElement>()
+            .unwrap();
+        button.set_text_content(Some("Download entries"));
+        button.set_type("button");
+        button.set_class_name("btn btn-primary btn-sm");
+
+        let on_click = EventListener::new(&button, "click", move |_event| {
+            log!("Hello World Gloo : WebAssemblyMan");
+        });
+
+        on_click.forget();
+        body.append_child(&button).unwrap();
     }
 }
