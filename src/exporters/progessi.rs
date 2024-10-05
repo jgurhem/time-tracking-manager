@@ -16,7 +16,7 @@ use crate::{
     utils,
 };
 
-use web_sys::{console::log_1, Document, HtmlButtonElement};
+use web_sys::{console::log_1, Document, HtmlButtonElement, HtmlDivElement};
 
 use super::Exporter;
 
@@ -137,7 +137,17 @@ impl Progessi {
             log!("Hello World Gloo : WebAssemblyMan");
         });
 
+        let element = self
+            .document
+            .query_selector(".fc-addcontrol")
+            .expect("element in which to add button was not found")
+            .expect("element in which to add button was not found")
+            .dyn_into::<HtmlDivElement>()
+            .expect("should be a div element");
+
+        log!("{:?}", element);
+
         on_click.forget();
-        body.append_child(&button).unwrap();
+        element.append_child(&button).unwrap();
     }
 }
