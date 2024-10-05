@@ -76,7 +76,7 @@ impl Progessi {
     }
 
     pub async fn download(&mut self) {
-        let mut c = Clockify::new(self.args.token.as_str());
+        let mut c = Clockify::new(self.args.token.clone());
         let entries = c.load(self.args.start, self.args.end).await.unwrap();
 
         let param = FilterParam::build(&self.args);

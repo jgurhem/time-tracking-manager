@@ -1,5 +1,6 @@
 use super::Provider;
 use crate::entries;
+use async_trait::async_trait;
 use chrono::DateTime;
 use chrono::Utc;
 use reqwest::header::HeaderMap;
@@ -10,12 +11,12 @@ use serde_json;
 use std::error::Error;
 
 #[derive(Debug)]
-pub struct Clockify<'a> {
-    token: &'a str,
+pub struct Clockify {
+    token: String,
 }
 
-impl<'a> Clockify<'a> {
-    pub fn new(token: &'a str) -> Clockify<'a> {
+impl Clockify {
+    pub fn new(token: String) -> Clockify {
         Clockify { token }
     }
 }
@@ -91,7 +92,8 @@ struct Tag {
     name: String,
 }
 
-impl Provider for Clockify<'_> {
+#[async_trait]
+impl Provider for Clockify {
     async fn load(
         &mut self,
         start: DateTime<Utc>,
@@ -107,9 +109,7 @@ impl Provider for Clockify<'_> {
         headers.append("X-Api-Key", HeaderValue::from_str(&self.token)?);
 
         let base = "https://api.clockify.me/api/v1";
-        let client = Client::builder()
-            .default_headers(headers)
-            .build()?;
+        let client = Client::builder().default_headers(headers).build()?;
 
         let req = client.get(format!("{base}/workspaces")).build()?;
         let workspace = client.execute(req).await?.json::<Vec<Workspace>>().await?;
