@@ -14,7 +14,7 @@ impl<'a> Exporter<'a> for CSV {
     where
         Self: 'a;
 
-    fn export(table: &Self::Table, display: &HashMap<String, String>) {
+    fn export(&self, table: &Self::Table, display: &HashMap<String, String>) {
         let months = table.group_by_month();
 
         for (month, dates) in months.iter() {

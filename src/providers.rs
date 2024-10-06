@@ -1,6 +1,5 @@
 use std::{
-    error::Error,
-    fmt::{Display, Formatter},
+    cell::RefCell, error::Error, fmt::{Display, Formatter}
 };
 
 use crate::{args::Args, entries::Entry};
@@ -8,7 +7,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use clockify::Clockify;
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait Provider {
     async fn load(
         &mut self,
@@ -20,7 +19,7 @@ pub trait Provider {
 pub mod clockify;
 
 pub struct ProviderHandle {
-    pub provider: Box<dyn Provider>,
+    pub provider: RefCell<Box<dyn Provider>>,
     pub args: Args,
 }
 
@@ -28,7 +27,7 @@ impl ProviderHandle {
     pub fn new(provider: &str, args: Args) -> Result<ProviderHandle, ProviderNotFound> {
         match provider {
             "Clockify" | "clockify" => Ok(ProviderHandle {
-                provider: Box::new(Clockify::new(args.token.clone())),
+                provider: RefCell::new(Box::new(Clockify::new(args.token.clone()))),
                 args,
             }),
             _ => Err(ProviderNotFound),

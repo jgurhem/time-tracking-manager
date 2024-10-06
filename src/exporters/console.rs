@@ -46,7 +46,7 @@ impl<'a> Exporter<'a> for Console {
     where
         Self: 'a;
 
-    fn export(table: &Self::Table, _: &HashMap<String, String>) {
+    fn export(&self, table: &Self::Table, _: &HashMap<String, String>) {
         let months = table.group_by_month();
 
         for (k, v) in months.iter() {

@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let handle = ProviderHandle::new("clockify", args).expect("Provider should be available");
     let args = handle.args;
-    let mut provider = handle.provider;
+    let mut provider = handle.provider.borrow_mut();
     let entries = provider.load(args.start, args.end).await?;
 
     let param = FilterParam::build(&args);
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         display.insert(k.to_string(), v.to_string());
     }
 
-    Console::export(&result, &display);
-    CSV::export(&result, &display);
+    Console {}.export(&result, &display);
+    CSV {}.export(&result, &display);
     Ok(())
 }

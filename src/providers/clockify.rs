@@ -92,7 +92,7 @@ struct Tag {
     name: String,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl Provider for Clockify {
     async fn load(
         &mut self,
