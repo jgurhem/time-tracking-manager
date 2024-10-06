@@ -19,7 +19,9 @@ use crate::{
 
 use std::sync::Arc;
 use std::sync::Mutex;
-use web_sys::{console::log_1, Document, HtmlButtonElement, HtmlDivElement};
+use web_sys::{
+    console::log_1, Document, Event, HtmlButtonElement, HtmlDivElement, HtmlInputElement, HtmlOptionElement, HtmlSelectElement
+};
 
 use super::{Exporter, WebExporter};
 
@@ -58,13 +60,91 @@ impl FromWasmAbi for Args {
     }
 }
 
+fn get_selected_from_timeline(timeline: &HtmlDivElement) -> String {
+    let selects = timeline
+        .query_selector_all("select")
+        .expect("Timeline should contain selects");
+
+    let mut selected = String::new();
+
+    for s in selects.values() {
+        let s = s.unwrap().dyn_into::<HtmlSelectElement>().unwrap();
+        let options = s.query_selector_all("option").unwrap();
+
+        selected += options
+            .get(s.selected_index().try_into().unwrap())
+            .unwrap()
+            .dyn_into::<HtmlOptionElement>()
+            .unwrap()
+            .text()
+            .as_str();
+    }
+    selected
+}
+
 impl<'a> Exporter<'a> for Progessi {
     type Table = MyTable<u8>
     where
         Self: 'a;
 
-    fn export(&self, table: &Self::Table, _: &HashMap<String, String>) {
-        let months = table.group_by_month();
+    fn export(&self, _: &Self::Table, _: &HashMap<String, String>) {
+        let timelines = self
+            .document
+            .query_selector_all(".fc-timeline")
+            .expect("Timelines should be available");
+
+        let row_headers: Vec<String> = self.table.row_headers().cloned().collect();
+
+        for timeline in timelines.values() {
+            let timeline = timeline
+                .expect("Should get a timeline")
+                .dyn_into::<HtmlDivElement>()
+                .expect("Timeline should be a div element");
+
+            let name = get_selected_from_timeline(&timeline).to_lowercase();
+
+            for h in &row_headers {
+                if name.contains(&self.display.get(h).unwrap_or(h).to_lowercase()) {
+                    let days = timeline
+                        .query_selector_all(".dayparent")
+                        .expect("Timelines should have days");
+
+                    for day in days.values() {
+                        let day = day
+                            .expect("Should get a day")
+                            .dyn_into::<HtmlDivElement>()
+                            .expect("Day should be a div element");
+
+                        let header = day
+                            .query_selector(".day-numbers")
+                            .expect("Day should have a header")
+                            .expect("Day should have a header")
+                            .dyn_into::<HtmlDivElement>()
+                            .expect("Day header should be an div")
+                            .text_content()
+                            .expect("Day header should have text")
+                            .parse::<u32>()
+                            .expect("Day number should be cast to integer");
+
+                        let input = day
+                            .query_selector("input")
+                            .expect("Day should have an input")
+                            .expect("Day should have an input")
+                            .dyn_into::<HtmlInputElement>()
+                            .expect("Day should be an input");
+
+                        let mut value: f64 = self.get(h.clone(), header).into();
+                        value /= 100.0;
+
+                        input.set_value(value.to_string().as_str());
+                        let event = Event::new("change").expect("Event should be created successfully");
+                        let _ = input.dispatch_event(&event);
+                    }
+
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -110,10 +190,6 @@ impl Progessi {
         }
     }
 
-    pub fn row_headers(&self) -> Vec<String> {
-        self.table.row_headers().cloned().collect()
-    }
-
     pub fn get(&self, row: String, day: u32) -> u8 {
         let day = Utc
             .with_ymd_and_hms(
@@ -135,7 +211,7 @@ async fn download_entries(progessi: Arc<Mutex<Progessi>>) {
 
 #[wasm_bindgen]
 impl ProgessiHandle {
-    pub fn new(args: Args, document: JsValue) -> ProgessiHandle {
+    pub async fn new(args: Args, document: JsValue) -> ProgessiHandle {
         console_error_panic_hook::set_once();
         let document = document
             .dyn_into::<Document>()
@@ -146,7 +222,7 @@ impl ProgessiHandle {
             .unwrap()
             .dyn_into::<HtmlButtonElement>()
             .unwrap();
-        dowload.set_text_content(Some("Download entries"));
+        dowload.set_text_content(Some("Refresh entries"));
         dowload.set_type("button");
         dowload.set_class_name("btn btn-primary btn-sm");
 
@@ -166,7 +242,8 @@ impl ProgessiHandle {
             .dyn_into::<HtmlDivElement>()
             .expect("should be a div element");
 
-        let progessi = Progessi::new(args, document);
+        let mut progessi = Progessi::new(args, document);
+        progessi.download_entries().await;
         let progessi = Arc::new(Mutex::new(progessi));
 
         let clone = Arc::clone(&progessi);
