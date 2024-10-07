@@ -20,7 +20,8 @@ use crate::{
 use std::sync::Arc;
 use std::sync::Mutex;
 use web_sys::{
-    console::log_1, Document, Event, HtmlButtonElement, HtmlDivElement, HtmlInputElement, HtmlOptionElement, HtmlSelectElement
+    console::log_1, Document, Event, HtmlButtonElement, HtmlDivElement, HtmlInputElement,
+    HtmlOptionElement, HtmlSelectElement, NodeList,
 };
 
 use super::{Exporter, WebExporter};
@@ -82,19 +83,156 @@ fn get_selected_from_timeline(timeline: &HtmlDivElement) -> String {
     selected
 }
 
+fn get_timelines(document: &Document) -> NodeList {
+    document
+        .query_selector_all(".fc-timeline")
+        .expect("Timelines should be available")
+}
+
+fn get_missing_timelines(
+    timelines: &NodeList,
+    rows: &Vec<String>,
+    display: &HashMap<String, String>,
+) -> Vec<String> {
+    let mut rows = rows.clone();
+
+    for i in 0..rows.len() {
+        let row = &rows[i];
+        rows[i] = display.get(row).unwrap_or(row).to_lowercase();
+    }
+
+    for timeline in timelines.values() {
+        let timeline = timeline
+            .expect("Should get a timeline")
+            .dyn_into::<HtmlDivElement>()
+            .expect("Timeline should be a div element");
+        let name = get_selected_from_timeline(&timeline).to_lowercase();
+        for i in 0..rows.len() {
+            if name.contains(&rows[i]) {
+                rows.remove(i);
+                break;
+            }
+        }
+    }
+    rows
+}
+
+fn get_options_from_select(select: &HtmlSelectElement) -> Vec<String> {
+    select
+        .query_selector_all("option")
+        .unwrap()
+        .values()
+        .into_iter()
+        .map(|e| {
+            e.unwrap()
+                .dyn_into::<HtmlOptionElement>()
+                .unwrap()
+                .text()
+                .to_lowercase()
+        })
+        .collect()
+}
+
+fn add_timelines(document: &Document, timelines: &Vec<String>) {
+    let element = document
+        .query_selector(".fc-addcontrol")
+        .expect("element containing add timeline button was not found")
+        .expect("element containing add timeline button was not found")
+        .dyn_into::<HtmlDivElement>()
+        .expect("element should be a div element")
+        .query_selector("button")
+        .expect("timeline button was not found")
+        .expect("timeline button was not found")
+        .dyn_into::<HtmlButtonElement>()
+        .expect("failed to cast to button");
+
+    if Some("Ajouter une ligne".to_string()) != element.text_content() {
+        panic!("We should find the button called 'Ajouter une ligne'")
+    }
+
+    for _ in timelines {
+        element.click();
+    }
+
+    for val in timelines {
+        // get first selector without value then get the timeline from it
+        let timeline = document
+            .query_selector("div.table-cell-workeffort > select:nth-child(1) > option[value=\"?\"]")
+            .unwrap()
+            .unwrap()
+            .closest(".fc-timeline")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<HtmlDivElement>()
+            .expect("Timeline should be a div element");
+
+        let selects = timeline
+            .query_selector_all("div.table-cell-workeffort > select")
+            .unwrap();
+
+        let s0 = selects
+            .get(0)
+            .expect("First select should be available")
+            .dyn_into::<HtmlSelectElement>()
+            .expect("Node should be a select");
+
+        let o0 = get_options_from_select(&s0);
+        let mut selected = String::new();
+        for i in 0..o0.len() {
+            if o0[i].contains(&val.to_lowercase()) {
+                s0.set_selected_index(i.try_into().unwrap());
+                let event = Event::new("change").expect("Event should be created successfully");
+                let _ = s0.dispatch_event(&event);
+                selected = o0[i].clone();
+                break;
+            }
+        }
+
+        if !selected.is_empty() && !selected.contains("Activité interne") {
+            break;
+        }
+
+        if selected.is_empty() {
+            let s1 = selects
+                .get(1)
+                .expect("First select should be available")
+                .dyn_into::<HtmlSelectElement>()
+                .expect("Node should be a select");
+
+            let o1 = get_options_from_select(&s1);
+            let mut selected = String::new();
+            for i in 0..o1.len() {
+                if o1[i].contains(&val.to_lowercase()) {
+                    s1.set_selected_index(i.try_into().unwrap());
+                    let event = Event::new("change").expect("Event should be created successfully");
+                    let _ = s1.dispatch_event(&event);
+                    selected = o1[i].clone();
+                    break;
+                }
+            }
+
+            if selected.is_empty() {
+                log!("time line not found for {}", val);
+            }
+        }
+    }
+}
+
 impl<'a> Exporter<'a> for Progessi {
     type Table = MyTable<u8>
     where
         Self: 'a;
 
     fn export(&self, _: &Self::Table, _: &HashMap<String, String>) {
-        let timelines = self
-            .document
-            .query_selector_all(".fc-timeline")
-            .expect("Timelines should be available");
+        let timelines = get_timelines(&self.document);
 
         let row_headers: Vec<String> = self.table.row_headers().cloned().collect();
+        let missing = get_missing_timelines(&timelines, &row_headers, &self.display);
 
+        log!("missing {:?}", missing);
+        add_timelines(&self.document, &missing);
+
+        let timelines = get_timelines(&self.document);
         for timeline in timelines.values() {
             let timeline = timeline
                 .expect("Should get a timeline")
@@ -137,7 +275,8 @@ impl<'a> Exporter<'a> for Progessi {
                         value /= 100.0;
 
                         input.set_value(value.to_string().as_str());
-                        let event = Event::new("change").expect("Event should be created successfully");
+                        let event =
+                            Event::new("change").expect("Event should be created successfully");
                         let _ = input.dispatch_event(&event);
                     }
 
