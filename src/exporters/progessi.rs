@@ -304,10 +304,6 @@ impl<'a> WebExporter<'a> for Progessi {
             .map(|x| renames.predicate_rename(x))
             .collect();
 
-        for e in &entries {
-            log!("{:?}", e);
-        }
-
         self.table = Proportional::process(entries);
 
         for d in args.display.iter() {
