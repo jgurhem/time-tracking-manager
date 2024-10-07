@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use async_trait::async_trait;
-use chrono::{Datelike, TimeZone, Utc};
+use chrono::{Datelike, NaiveDateTime, TimeZone, Utc};
 use gloo::events::EventListener;
 use wasm_bindgen::{
     convert::FromWasmAbi, describe::WasmDescribe, prelude::wasm_bindgen, JsCast, JsValue,
@@ -14,7 +14,7 @@ use crate::{
     providers::ProviderHandle,
     renamers::Renames,
     tablers::{proportional::Proportional, MyTable, Table, Tabler},
-    utils,
+    utils::{self, end_of_month},
 };
 
 use std::sync::Arc;
@@ -378,6 +378,23 @@ impl ProgessiHandle {
             .expect("element in which to add button was not found")
             .dyn_into::<HtmlDivElement>()
             .expect("should be a div element");
+
+        let start = document
+            .query_selector(".menu-selector-validateTimesheet > form > input[name=\"fromDate\"]")
+            .expect("Validate button should have a date input")
+            .expect("Validate button should have a date input")
+            .dyn_into::<HtmlInputElement>()
+            .expect("Element should be cast into input")
+            .value()
+            .replace(" ", "T");
+
+        let start = NaiveDateTime::from_str(&start)
+            .expect("date should be valid")
+            .and_local_timezone(Utc)
+            .unwrap();
+        let end = end_of_month(&start);
+
+        let args = Args { start, end, ..args };
 
         let mut progessi = Progessi::new(args, document);
         progessi.download_entries().await;

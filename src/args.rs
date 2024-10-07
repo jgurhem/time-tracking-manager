@@ -1,6 +1,8 @@
-use chrono::{DateTime, Datelike, Months, TimeDelta, TimeZone, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
+
+use crate::utils::end_of_month;
 
 fn start_month() -> DateTime<Utc> {
     let utc = Utc::now();
@@ -9,11 +11,7 @@ fn start_month() -> DateTime<Utc> {
 }
 
 fn end_month() -> DateTime<Utc> {
-    start_month()
-        .checked_add_months(Months::new(1))
-        .unwrap()
-        .checked_sub_signed(TimeDelta::milliseconds(1))
-        .unwrap()
+    end_of_month(&start_month())
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize, PartialEq)]
