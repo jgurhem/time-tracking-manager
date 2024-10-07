@@ -150,11 +150,9 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
         panic!("We should find the button called 'Ajouter une ligne'")
     }
 
-    for _ in timelines {
-        element.click();
-    }
-
     for val in timelines {
+        element.click();
+
         // get first selector without value then get the timeline from it
         let timeline = document
             .query_selector("div.table-cell-workeffort > select:nth-child(1) > option[value=\"?\"]")
@@ -189,7 +187,7 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
         }
 
         if !selected.is_empty() && !selected.contains("Activité interne") {
-            break;
+            continue;
         }
 
         if selected.is_empty() {
