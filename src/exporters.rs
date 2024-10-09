@@ -13,10 +13,14 @@ pub trait Exporter<'a> {
     type Table: Table<Item<'a>: Display + Serialize>
     where
         Self: 'a;
-    fn export(&self, table: &Self::Table, display: &HashMap<String, String>) -> Result<(), Box<dyn Error>>;
+    fn export(
+        &self,
+        table: &Self::Table,
+        display: &HashMap<String, String>,
+    ) -> Result<(), Box<dyn Error>>;
 }
 
 #[async_trait(?Send)]
-pub trait WebExporter<'a> : Exporter<'a> {
+pub trait WebExporter<'a>: Exporter<'a> {
     async fn download_entries(&mut self);
 }
