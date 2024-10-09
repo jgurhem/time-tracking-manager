@@ -1,22 +1,25 @@
 use clap::Parser;
-use std::{collections::HashMap, error::Error};
+use std::{borrow::BorrowMut, collections::HashMap, error::Error};
 use time_tracking_manager::{
     args::Args,
     entries::Entry,
     exporters::{console::Console, csv::CSV, Exporter},
     filters::{predicate_filter, FilterParam},
-    providers::{clockify::Clockify, Provider},
+    providers::{Provider, ProviderHandle},
     renamers::Renames,
     tablers::{proportional::Proportional, Tabler},
     utils,
 };
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     dbg!(&args);
 
-    let mut c = Clockify::new(args.token.as_str());
-    let entries = c.load(args.start, args.end)?;
+    let handle = ProviderHandle::new("clockify", args).expect("Provider should be available");
+    let args = handle.args;
+    let mut provider = handle.provider.borrow_mut();
+    let entries = provider.load(args.start, args.end).await?;
 
     let param = FilterParam::build(&args);
     let renames = Renames::build(&args).unwrap();
@@ -34,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         display.insert(k.to_string(), v.to_string());
     }
 
-    Console::export(&result, &display);
-    CSV::export(&result, &display);
+    Console {}.export(&result, &display);
+    CSV {}.export(&result, &display);
     Ok(())
 }
