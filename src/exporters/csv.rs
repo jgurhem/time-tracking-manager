@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 
 use chrono::Datelike;
 use csv::Writer;
@@ -14,7 +14,7 @@ impl<'a> Exporter<'a> for CSV {
     where
         Self: 'a;
 
-    fn export(&self, table: &Self::Table, display: &HashMap<String, String>) {
+    fn export(&self, table: &Self::Table, display: &HashMap<String, String>) -> Result<(), Box<dyn Error>>  {
         let months = table.group_by_month();
 
         for (month, dates) in months.iter() {
@@ -44,5 +44,6 @@ impl<'a> Exporter<'a> for CSV {
             }
             wtr.flush().unwrap();
         }
+        Ok(())
     }
 }
