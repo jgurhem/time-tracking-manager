@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         display.insert(k.to_string(), v.to_string());
     }
 
-    Console {}.export(&result, &display);
-    CSV {}.export(&result, &display);
+    Console {}.export(&result, &display).unwrap();
+    CSV {}.export(&result, &display).unwrap();
     Ok(())
 }

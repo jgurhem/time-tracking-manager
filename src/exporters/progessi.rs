@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, error::Error, str::FromStr};
 
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDateTime, TimeZone, Utc};
@@ -221,7 +221,7 @@ impl<'a> Exporter<'a> for Progessi {
     where
         Self: 'a;
 
-    fn export(&self, _: &Self::Table, _: &HashMap<String, String>) {
+    fn export(&self, _: &Self::Table, _: &HashMap<String, String>) -> Result<(), Box<dyn Error>> {
         let timelines = get_timelines(&self.document);
 
         let row_headers: Vec<String> = self.table.row_headers().cloned().collect();
@@ -282,6 +282,7 @@ impl<'a> Exporter<'a> for Progessi {
                 }
             }
         }
+        Ok(())
     }
 }
 

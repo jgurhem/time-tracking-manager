@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::{collections::{BTreeSet, HashMap}, error::Error};
 
 use chrono::{DateTime, Datelike, Utc};
 
@@ -46,12 +46,13 @@ impl<'a> Exporter<'a> for Console {
     where
         Self: 'a;
 
-    fn export(&self, table: &Self::Table, _: &HashMap<String, String>) {
+    fn export(&self, table: &Self::Table, _: &HashMap<String, String>) -> Result<(), Box<dyn Error>> {
         let months = table.group_by_month();
 
         for (k, v) in months.iter() {
             println!("{}", build_month_table(&k, &v, table));
         }
+        Ok(())
     }
 }
 
