@@ -1,5 +1,7 @@
 use std::{
-    cell::RefCell, error::Error, fmt::{Display, Formatter}
+    cell::RefCell,
+    error::Error,
+    fmt::{Display, Formatter},
 };
 
 use crate::{args::Args, entries::Entry};

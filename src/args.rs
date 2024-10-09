@@ -81,7 +81,6 @@ impl Default for Args {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,7 +88,10 @@ mod tests {
     #[test]
     fn default_deserialization() {
         let args = Args::from_token("token".into());
-        assert_eq!(args, serde_json::from_str("{\"token\":\"token\"}".into()).expect("valid json representing Args"))
+        assert_eq!(
+            args,
+            serde_json::from_str("{\"token\":\"token\"}".into())
+                .expect("valid json representing Args")
+        )
     }
-
 }
