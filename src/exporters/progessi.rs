@@ -320,7 +320,7 @@ impl Progessi {
             table: MyTable::new(),
             display: HashMap::new(),
             document,
-            provider: ProviderHandle::new("clockify", args).expect("Provider not found"),
+            provider: ProviderHandle::new(args).expect("Provider not found"),
         }
     }
 

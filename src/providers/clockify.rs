@@ -8,6 +8,7 @@ use reqwest::header::HeaderValue;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json;
+use std::collections::HashMap;
 use std::error::Error;
 
 #[derive(Debug)]
@@ -16,8 +17,13 @@ pub struct Clockify {
 }
 
 impl Clockify {
-    pub fn new(token: String) -> Clockify {
-        Clockify { token }
+    pub fn new(options: HashMap<String, String>) -> Clockify {
+        Clockify {
+            token: options
+                .get("token")
+                .expect("Clockify provider options should contain a token")
+                .clone(),
+        }
     }
 }
 
