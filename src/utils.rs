@@ -1,22 +1,24 @@
-use std::error::Error;
-
 use chrono::{DateTime, Months, TimeDelta, Utc};
 
-pub fn split___(s: &str) -> (&str, &str) {
+use crate::errors::SplitError;
+
+pub fn split___(s: &str) -> (String, String) {
     let s: Vec<&str> = s.split("___").collect();
     if s.len() == 1 {
-        (s[0], "")
+        (s[0].to_string(), String::new())
     } else {
-        (s[0], s[1])
+        (s[0].to_string(), s[1].to_string())
     }
 }
 
-pub fn split_eq(s: &str) -> Result<(&str, &str), Box<dyn Error>> {
-    let s: Vec<&str> = s.split("=").collect();
-    match s.len() {
-        2 => Ok((s[0], s[1])),
-        1 => Err(Box::from("Rename should have an = in the middle")),
-        _ => Err(Box::from("Rename should have only one = in the middle")),
+pub fn split_eq(s: &str) -> Result<(String, String), SplitError> {
+    let split: Vec<&str> = s.split("=").collect();
+    match split.len() {
+        2 => Ok((split[0].to_string(), split[1].to_string())),
+        _ => Err(SplitError {
+            field: s.to_string(),
+            reason: String::from("field should contain one and only one (key=value)"),
+        }),
     }
 }
 
