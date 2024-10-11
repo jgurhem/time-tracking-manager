@@ -1,11 +1,11 @@
 use clap::Parser;
-use std::{borrow::BorrowMut, collections::HashMap, error::Error};
+use std::{collections::HashMap, error::Error};
 use time_tracking_manager::{
     args::Args,
     entries::Entry,
     exporters::{console::Console, csv::CSV, Exporter},
     filters::{predicate_filter, FilterParam},
-    providers::{Provider, ProviderHandle},
+    providers::ProviderHandle,
     renamers::Renames,
     tablers::{proportional::Proportional, Tabler},
     utils,
@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     dbg!(&args);
 
-    let handle = ProviderHandle::new("clockify", args).expect("Provider should be available");
+    let handle = ProviderHandle::new(args).expect("Provider should be available");
     let args = handle.args;
     let mut provider = handle.provider.borrow_mut();
     let entries = provider.load(args.start, args.end).await?;

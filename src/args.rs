@@ -17,9 +17,17 @@ fn end_month() -> DateTime<Utc> {
 #[derive(Parser, Debug, Serialize, Deserialize, PartialEq)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Clockify token used to retrieve entries
+    /// Provider used to retrieve entries
+    #[arg(short('P'), long)]
+    pub provider: String,
+
+    /// Options passed to the provider such as authentication informations and token
+    /// ---
+    /// *Clockify Options*
+    ///   token: Clockify authentication token
     #[arg(short, long)]
-    pub token: String,
+    #[serde(default)]
+    pub provider_options: Vec<String>,
 
     /// DateTime from wich to start retrieving entries
     #[arg(short, long, default_value_t = start_month())]
@@ -57,19 +65,11 @@ pub struct Args {
     pub display: Vec<String>,
 }
 
-impl Args {
-    pub fn from_token(token: String) -> Args {
-        Args {
-            token,
-            ..Default::default()
-        }
-    }
-}
-
 impl Default for Args {
     fn default() -> Self {
         Self {
-            token: Default::default(),
+            provider: "clockify".into(),
+            provider_options: Default::default(),
             start: start_month(),
             end: end_month(),
             ignored: false,
@@ -87,10 +87,10 @@ mod tests {
 
     #[test]
     fn default_deserialization() {
-        let args = Args::from_token("token".into());
+        let args = Args::default();
         assert_eq!(
             args,
-            serde_json::from_str("{\"token\":\"token\"}".into())
+            serde_json::from_str("{\"provider\":\"clockify\"}".into())
                 .expect("valid json representing Args")
         )
     }

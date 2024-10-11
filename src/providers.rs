@@ -4,7 +4,7 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-use crate::{args::Args, entries::Entry};
+use crate::{args::Args, entries::Entry, utils::split_eq};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use clockify::Clockify;
@@ -26,10 +26,16 @@ pub struct ProviderHandle {
 }
 
 impl ProviderHandle {
-    pub fn new(provider: &str, args: Args) -> Result<ProviderHandle, ProviderNotFound> {
-        match provider {
+    pub fn new(args: Args) -> Result<ProviderHandle, ProviderNotFound> {
+        let options = args
+            .provider_options
+            .clone()
+            .into_iter()
+            .map(|o| split_eq(&o).unwrap())
+            .collect();
+        match args.provider.as_str() {
             "Clockify" | "clockify" => Ok(ProviderHandle {
-                provider: RefCell::new(Box::new(Clockify::new(args.token.clone()))),
+                provider: RefCell::new(Box::new(Clockify::new(options))),
                 args,
             }),
             _ => Err(ProviderNotFound),
@@ -37,7 +43,7 @@ impl ProviderHandle {
     }
 }
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub struct ProviderNotFound;
 
 impl Display for ProviderNotFound {
@@ -45,5 +51,3 @@ impl Display for ProviderNotFound {
         f.write_str("Could not find the specifed provider.")
     }
 }
-
-impl Error for ProviderNotFound {}

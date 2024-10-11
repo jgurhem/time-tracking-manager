@@ -6,27 +6,27 @@ use crate::{
     utils::{split___, split_eq},
 };
 
-struct RenameParam<'a> {
-    p1: &'a str,
-    t1: &'a str,
-    p2: &'a str,
-    t2: &'a str,
+struct RenameParam {
+    p1: String,
+    t1: String,
+    p2: String,
+    t2: String,
 }
 
-impl<'a> RenameParam<'a> {
+impl RenameParam {
     pub fn build(s: &str) -> Result<RenameParam, Box<dyn Error>> {
         let (lhs, rhs) = split_eq(&s)?;
-        let (p1, t1) = split___(&lhs);
-        let (p2, t2) = split___(&rhs);
+        let (p1, t1) = split___(lhs.as_str());
+        let (p2, t2) = split___(rhs.as_str());
         Ok(RenameParam { p1, p2, t1, t2 })
     }
 }
 
-pub struct Renames<'a> {
-    r: Vec<RenameParam<'a>>,
+pub struct Renames {
+    r: Vec<RenameParam>,
 }
 
-impl<'a> Renames<'a> {
+impl Renames {
     pub fn build(args: &Args) -> Result<Renames, Box<dyn Error>> {
         let mut r = Vec::with_capacity(args.rename.len());
 
@@ -38,7 +38,7 @@ impl<'a> Renames<'a> {
     }
 }
 
-impl<'a> Renames<'a> {
+impl Renames {
     pub fn predicate_rename(&self, e: Entry) -> Entry {
         for r in &self.r {
             if e.project == r.p1 && e.task == r.t1 {
