@@ -101,3 +101,100 @@ impl<'a> Tabler<'a> for Proportional {
         table
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeZone;
+
+    use crate::entries::Entry;
+
+    use super::*;
+
+    #[test]
+    fn entry_default() {
+        let day = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap();
+        let entries = vec![Entry {
+            start: day.checked_add_signed(TimeDelta::hours(13)).unwrap(),
+            end: day.checked_add_signed(TimeDelta::hours(14)).unwrap(),
+            ..Default::default()
+        }];
+        let table = Proportional::process(entries);
+        assert_eq!(table.col_headers().len(), 1);
+        assert_eq!(table.row_headers().len(), 1);
+    }
+
+    #[test]
+    fn one_day_half_time() {
+        let p1 = String::from("project1");
+        let p2 = String::from("project2");
+        let t1 = String::from("task1");
+        let day = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap();
+
+        let e2 = Entry {
+            project: p2.clone(),
+            start: day.checked_add_signed(TimeDelta::hours(13)).unwrap(),
+            end: day.checked_add_signed(TimeDelta::hours(15)).unwrap(),
+            ..Default::default()
+        };
+
+        let entries = vec![
+            Entry {
+                project: p1.clone(),
+                task: t1.clone(),
+                start: day.checked_add_signed(TimeDelta::hours(11)).unwrap(),
+                end: day.checked_add_signed(TimeDelta::hours(12)).unwrap(),
+                ..Default::default()
+            },
+            Entry {
+                project: p1.clone(),
+                task: t1.clone(),
+                start: day.checked_add_signed(TimeDelta::hours(12)).unwrap(),
+                end: day.checked_add_signed(TimeDelta::hours(13)).unwrap(),
+                ..Default::default()
+            },
+            e2.clone(),
+        ];
+        let table = Proportional::process(entries);
+
+        assert_eq!(table.col_headers().len(), 1);
+        assert_eq!(table.row_headers().len(), 2);
+        assert_eq!(table.get(p2.clone(), day), 50);
+        assert_eq!(table.get(e2.to_project___task().to_string(), day), 50);
+    }
+
+    #[test]
+    fn col_sum_should_be_100() {
+        let p1 = String::from("project1");
+        let p2 = String::from("project2");
+        let p3 = String::from("project3");
+        let day = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap();
+
+        let entries = vec![
+            Entry {
+                project: p1.clone(),
+                start: day.checked_add_signed(TimeDelta::hours(11)).unwrap(),
+                end: day.checked_add_signed(TimeDelta::hours(12)).unwrap(),
+                ..Default::default()
+            },
+            Entry {
+                project: p2.clone(),
+                start: day.checked_add_signed(TimeDelta::hours(12)).unwrap(),
+                end: day.checked_add_signed(TimeDelta::hours(13)).unwrap(),
+                ..Default::default()
+            },
+            Entry {
+                project: p3.clone(),
+                start: day.checked_add_signed(TimeDelta::hours(13)).unwrap(),
+                end: day.checked_add_signed(TimeDelta::hours(14)).unwrap(),
+                ..Default::default()
+            },
+        ];
+        let table = Proportional::process(entries);
+
+        let sum: u8 = table.row_headers().map(|r| table.get(r.clone(), day)).sum();
+
+        assert_eq!(table.col_headers().len(), 1);
+        assert_eq!(table.row_headers().len(), 3);
+        assert_eq!(sum, 100);
+    }
+}
