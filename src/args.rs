@@ -14,7 +14,7 @@ fn end_month() -> DateTime<Utc> {
     end_of_month(&start_month())
 }
 
-#[derive(Parser, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Parser, Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// Provider used to retrieve entries

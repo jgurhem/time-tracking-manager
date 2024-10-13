@@ -44,6 +44,7 @@ pub trait Table {
     }
 }
 
+#[derive(Default)]
 pub struct MyTable<T> {
     row_headers: HashSet<String>,
     col_headers: HashSet<DateTime<Utc>>,
@@ -72,14 +73,6 @@ impl<T: Clone + Default> Table for MyTable<T> {
 }
 
 impl<T> MyTable<T> {
-    pub fn new() -> MyTable<T> {
-        MyTable {
-            col_headers: HashSet::new(),
-            row_headers: HashSet::new(),
-            content: HashMap::new(),
-        }
-    }
-
     /// Insert a value
     /// Return None if no value was present at (row, col).
     /// If a value was present, it is replaced by the new and the old value is returned
@@ -107,7 +100,7 @@ mod tests {
 
     #[test]
     fn insertion() {
-        let mut t: MyTable<u8> = MyTable::new();
+        let mut t: MyTable<u8> = MyTable::default();
         let now = Utc::now();
         t.insert("".to_string(), now, 1);
         let old = t.insert("".to_string(), now, 2).unwrap();
@@ -116,7 +109,7 @@ mod tests {
 
     #[test]
     fn mutate_same() {
-        let mut t: MyTable<u8> = MyTable::new();
+        let mut t: MyTable<u8> = MyTable::default();
         let now = Utc::now();
         t.insert("".to_string(), now, 1);
         let v = t.get_mut("".to_string(), now).unwrap();
@@ -127,7 +120,7 @@ mod tests {
 
     #[test]
     fn get_default() {
-        let t: MyTable<u8> = MyTable::new();
+        let t: MyTable<u8> = MyTable::default();
         let now = Utc::now();
         let v = t.get("".to_string(), now);
         assert_eq!(0, v);

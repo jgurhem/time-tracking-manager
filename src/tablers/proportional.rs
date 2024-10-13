@@ -19,7 +19,7 @@ impl<'a> Tabler<'a> for Proportional {
         Self: 'a;
 
     fn process(entries: Vec<crate::entries::Entry>) -> Self::Table {
-        let mut delta: MyTable<TimeDelta> = MyTable::new();
+        let mut delta: MyTable<TimeDelta> = MyTable::default();
         let mut days: HashMap<DateTime<Utc>, TimeDelta> = HashMap::new();
 
         for e in entries {
@@ -42,7 +42,7 @@ impl<'a> Tabler<'a> for Proportional {
             }
         }
 
-        let mut table = Self::Table::new();
+        let mut table = Self::Table::default();
 
         for s in delta.row_headers() {
             for d in delta.col_headers() {

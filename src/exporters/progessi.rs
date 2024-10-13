@@ -1,20 +1,17 @@
 use std::{collections::HashMap, error::Error, str::FromStr};
 
-use async_trait::async_trait;
-use chrono::{Datelike, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Datelike, NaiveDateTime, TimeZone, Utc};
 use gloo::events::EventListener;
 use wasm_bindgen::{
     convert::FromWasmAbi, describe::WasmDescribe, prelude::wasm_bindgen, JsCast, JsValue,
+    UnwrapThrowExt,
 };
 
 use crate::{
     args::Args,
-    entries::Entry,
-    filters::{predicate_filter, FilterParam},
-    providers::ProviderHandle,
-    renamers::Renames,
-    tablers::{proportional::Proportional, MyTable, Table, Tabler},
-    utils::{self, end_of_month},
+    provider_handle::ProviderHandle,
+    tablers::{MyTable, Table},
+    utils::end_of_month,
 };
 
 use std::sync::Arc;
@@ -24,19 +21,15 @@ use web_sys::{
     HtmlOptionElement, HtmlSelectElement, NodeList,
 };
 
-use super::{Exporter, WebExporter};
+use super::Exporter;
 
 pub struct Progessi {
-    table: MyTable<u8>,
-    display: HashMap<String, String>,
-    document: Document,
-    provider: ProviderHandle,
+    pub start: DateTime<Utc>,
+    pub document: Document,
 }
 
 #[wasm_bindgen]
-pub struct ProgessiHandle {
-    progessi: Arc<Mutex<Progessi>>,
-}
+pub struct ProgessiHandle {}
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
 macro_rules! log {
@@ -221,11 +214,15 @@ impl<'a> Exporter<'a> for Progessi {
     where
         Self: 'a;
 
-    fn export(&self, _: &Self::Table, _: &HashMap<String, String>) -> Result<(), Box<dyn Error>> {
+    fn export(
+        &self,
+        table: &Self::Table,
+        display: &HashMap<String, String>,
+    ) -> Result<(), Box<dyn Error>> {
         let timelines = get_timelines(&self.document);
 
-        let row_headers: Vec<String> = self.table.row_headers().cloned().collect();
-        let missing = get_missing_timelines(&timelines, &row_headers, &self.display);
+        let row_headers: Vec<String> = table.row_headers().cloned().collect();
+        let missing = get_missing_timelines(&timelines, &row_headers, display);
 
         log!("missing {:?}", missing);
         add_timelines(&self.document, &missing);
@@ -240,7 +237,7 @@ impl<'a> Exporter<'a> for Progessi {
             let name = get_selected_from_timeline(&timeline).to_lowercase();
 
             for h in &row_headers {
-                if name.contains(&self.display.get(h).unwrap_or(h).to_lowercase()) {
+                if name.contains(&display.get(h).unwrap_or(h).to_lowercase()) {
                     let days = timeline
                         .query_selector_all(".dayparent")
                         .expect("Timelines should have days");
@@ -269,7 +266,7 @@ impl<'a> Exporter<'a> for Progessi {
                             .dyn_into::<HtmlInputElement>()
                             .expect("Day should be an input");
 
-                        let mut value: f64 = self.get(h.clone(), header).into();
+                        let mut value: f64 = self.get(table, h.clone(), header).into();
                         value /= 100.0;
 
                         input.set_value(value.to_string().as_str());
@@ -286,61 +283,23 @@ impl<'a> Exporter<'a> for Progessi {
     }
 }
 
-#[async_trait(?Send)]
-impl<'a> WebExporter<'a> for Progessi {
-    async fn download_entries(&mut self) {
-        let args = &self.provider.args;
-        let provider = &self.provider.provider;
-        let entries = provider
-            .borrow_mut()
-            .load(args.start, args.end)
-            .await
-            .unwrap();
-
-        let param = FilterParam::build(&args);
-        let renames = Renames::build(&args).unwrap();
-        let entries: Vec<Entry> = entries
-            .into_iter()
-            .filter(|x| predicate_filter(&x, &param))
-            .map(|x| renames.predicate_rename(x))
-            .collect();
-
-        self.table = Proportional::process(entries);
-
-        for d in args.display.iter() {
-            let (k, v) = utils::split_eq(d).unwrap();
-            self.display.insert(k.to_string(), v.to_string());
-        }
-    }
-}
-
 impl Progessi {
-    pub fn new(args: Args, document: Document) -> Progessi {
-        Progessi {
-            table: MyTable::new(),
-            display: HashMap::new(),
-            document,
-            provider: ProviderHandle::new(args).expect("Provider not found"),
-        }
-    }
-
-    pub fn get(&self, row: String, day: u32) -> u8 {
+    pub fn get(&self, table: &MyTable<u8>, row: String, day: u32) -> u8 {
         let day = Utc
-            .with_ymd_and_hms(
-                self.provider.args.start.year(),
-                self.provider.args.start.month(),
-                day,
-                0,
-                0,
-                0,
-            )
+            .with_ymd_and_hms(self.start.year(), self.start.month(), day, 0, 0, 0)
             .unwrap();
-        self.table.get(row, day)
+        table.get(row, day)
     }
 }
 
-async fn download_entries(progessi: Arc<Mutex<Progessi>>) {
-    progessi.lock().unwrap().download_entries().await;
+async fn download_entries(handle: Arc<Mutex<ProviderHandle>>) {
+    handle
+        .lock()
+        .unwrap()
+        .download_entries()
+        .await
+        .unwrap_throw();
+    handle.lock().unwrap().process().unwrap_throw();
 }
 
 #[wasm_bindgen]
@@ -393,27 +352,33 @@ impl ProgessiHandle {
 
         let args = Args { start, end, ..args };
 
-        let mut progessi = Progessi::new(args, document);
-        progessi.download_entries().await;
-        let progessi = Arc::new(Mutex::new(progessi));
+        let mut handle = ProviderHandle::new(args.clone()).expect("Provider not found");
+        handle.download_entries().await.unwrap_throw();
+        handle.process().unwrap_throw();
 
-        let clone = Arc::clone(&progessi);
+        let handle = Arc::new(Mutex::new(handle));
+
+        let clone = Arc::clone(&handle);
         let on_click = EventListener::new(&dowload, "click", move |_event| {
             let clone = Arc::clone(&clone);
             wasm_bindgen_futures::spawn_local(download_entries(clone));
         });
         on_click.forget();
 
-        let clone = Arc::clone(&progessi);
+        let clone = Arc::clone(&handle);
         let on_click = EventListener::new(&fill, "click", move |_event| {
-            let progessi = clone.lock().unwrap();
-            progessi.export(&progessi.table, &progessi.display);
+            let handle = clone.lock().unwrap();
+            let progessi = Progessi {
+                start: start.clone(),
+                document: document.clone(),
+            };
+            handle.export(Box::new(progessi)).unwrap_throw();
         });
         on_click.forget();
 
         element.append_child(&dowload).unwrap();
         element.append_child(&fill).unwrap();
 
-        ProgessiHandle { progessi }
+        ProgessiHandle {}
     }
 }

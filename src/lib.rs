@@ -3,6 +3,7 @@ pub mod entries;
 pub mod errors;
 pub mod exporters;
 pub mod filters;
+pub mod provider_handle;
 pub mod providers;
 pub mod renamers;
 pub mod tablers;
