@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error};
+use std::{collections::HashMap, error::Error, fs::create_dir_all};
 
 use chrono::Datelike;
 use csv::Writer;
@@ -23,6 +23,7 @@ impl<'a> Exporter<'a> for CSV {
 
         for (month, dates) in months.iter() {
             let ncol = dates.len() + 1;
+            create_dir_all("export").ok();
             let mut wtr =
                 Writer::from_path(format!("export/{}_{}.csv", month.year(), month.month()))
                     .unwrap();
@@ -49,5 +50,125 @@ impl<'a> Exporter<'a> for CSV {
             wtr.flush().unwrap();
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::{read_to_string, remove_file};
+
+    use chrono::{TimeZone, Utc};
+    use serial_test::serial;
+
+    use super::*;
+
+    fn create_table() -> MyTable<u8> {
+        let mut table = MyTable::<u8>::default();
+        table.insert(
+            String::from("row1"),
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            8.into(),
+        );
+        table.insert(
+            String::from("row2"),
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            9.into(),
+        );
+        table.insert(
+            String::from("row3"),
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            10.into(),
+        );
+
+        table.insert(
+            String::from("row1"),
+            Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
+            8.into(),
+        );
+        table.insert(
+            String::from("row2"),
+            Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
+            9.into(),
+        );
+        table.insert(
+            String::from("row3"),
+            Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
+            10.into(),
+        );
+
+        table.insert(
+            String::from("row1"),
+            Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
+            8.into(),
+        );
+        table.insert(
+            String::from("row2"),
+            Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
+            9.into(),
+        );
+        table.insert(
+            String::from("row3"),
+            Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
+            10.into(),
+        );
+
+        table
+    }
+
+    #[test]
+    #[serial]
+    fn csv_no_display() {
+        let table = create_table();
+        let display = HashMap::<String, String>::new();
+        let csv = CSV {};
+
+        let path = "export/2024_10.csv";
+        remove_file(path).ok();
+        csv.export(&table, &display).unwrap();
+        let content = read_to_string(path).unwrap();
+        remove_file(path).ok();
+        assert_eq!(
+            content,
+            String::from("2024 10,12,13\nrow1,8,8\nrow2,9,9\nrow3,10,10\n")
+        );
+
+        let path = "export/2024_11.csv";
+        remove_file(path).ok();
+        csv.export(&table, &display).unwrap();
+        let content = read_to_string(path).unwrap();
+        remove_file(path).ok();
+        assert_eq!(
+            content,
+            String::from("2024 11,13\nrow1,8\nrow2,9\nrow3,10\n")
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn csv_display() {
+        let table = create_table();
+        let mut display = HashMap::<String, String>::new();
+        display.insert(String::from("row1"), String::from("displayed"));
+        let csv = CSV {};
+
+        let path = "export/2024_10.csv";
+        remove_file(path).ok();
+        csv.export(&table, &display).unwrap();
+        let content = read_to_string(path).unwrap();
+        remove_file(path).ok();
+        assert_eq!(
+            content,
+            String::from("2024 10,12,13\ndisplayed,8,8\nrow2,9,9\nrow3,10,10\n")
+        );
+
+        let path = "export/2024_11.csv";
+        remove_file(path).ok();
+        csv.export(&table, &display).unwrap();
+        let content = read_to_string(path).unwrap();
+        remove_file(path).ok();
+        assert_eq!(
+            content,
+            String::from("2024 11,13\ndisplayed,8\nrow2,9\nrow3,10\n")
+        );
     }
 }

@@ -76,7 +76,7 @@ impl<T> MyTable<T> {
     /// Insert a value
     /// Return None if no value was present at (row, col).
     /// If a value was present, it is replaced by the new and the old value is returned
-    fn insert(&mut self, row: String, col: DateTime<Utc>, item: T) -> Option<T> {
+    pub(super) fn insert(&mut self, row: String, col: DateTime<Utc>, item: T) -> Option<T> {
         self.col_headers.insert(col);
         self.row_headers.insert(row.clone());
         self.content.insert((row, col), item)
