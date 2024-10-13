@@ -1,14 +1,9 @@
 use clap::Parser;
-use std::{collections::HashMap, error::Error};
+use std::error::Error;
 use time_tracking_manager::{
     args::Args,
-    entries::Entry,
-    exporters::{console::Console, csv::CSV, Exporter},
-    filters::{predicate_filter, FilterParam},
-    providers::ProviderHandle,
-    renamers::Renames,
-    tablers::{proportional::Proportional, Tabler},
-    utils,
+    exporters::{console::Console, csv::CSV},
+    provider_handle::ProviderHandle,
 };
 
 #[tokio::main(flavor = "current_thread")]
@@ -16,28 +11,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     dbg!(&args);
 
-    let handle = ProviderHandle::new(args).expect("Provider should be available");
-    let args = handle.args;
-    let mut provider = handle.provider.borrow_mut();
-    let entries = provider.load(args.start, args.end).await?;
+    let mut handle = ProviderHandle::new(args).expect("Provider should be available");
+    handle.download_entries().await?;
+    handle.process()?;
 
-    let param = FilterParam::build(&args);
-    let renames = Renames::build(&args).unwrap();
-    let entries: Vec<Entry> = entries
-        .into_iter()
-        .filter(|x| predicate_filter(&x, &param))
-        .map(|x| renames.predicate_rename(x))
-        .collect();
+    handle.export(Box::new(Console {})).unwrap();
+    handle.export(Box::new(CSV {})).unwrap();
 
-    let result = Proportional::process(entries);
-    let mut display = HashMap::new();
-
-    for d in args.display.iter() {
-        let (k, v) = utils::split_eq(d).unwrap();
-        display.insert(k.to_string(), v.to_string());
-    }
-
-    Console {}.export(&result, &display).unwrap();
-    CSV {}.export(&result, &display).unwrap();
     Ok(())
 }

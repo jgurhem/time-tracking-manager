@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Utc};
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Entry {
     pub id: String,
     pub description: String,
