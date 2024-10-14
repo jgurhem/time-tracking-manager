@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     handle.download_entries().await?;
     handle.process()?;
 
-    handle.export(Box::new(Console {})).unwrap();
+    handle.export(Box::new(Console::stdout_output())).unwrap();
     handle.export(Box::new(CSV {})).unwrap();
 
     Ok(())

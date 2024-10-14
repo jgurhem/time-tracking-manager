@@ -15,7 +15,7 @@ impl<'a> Exporter<'a> for CSV {
         Self: 'a;
 
     fn export(
-        &self,
+        &mut self,
         table: &Self::Table,
         display: &HashMap<String, String>,
     ) -> Result<(), Box<dyn Error>> {
@@ -120,7 +120,7 @@ mod tests {
     fn csv_no_display() {
         let table = create_table();
         let display = HashMap::<String, String>::new();
-        let csv = CSV {};
+        let mut csv = CSV {};
 
         let path = "export/2024_10.csv";
         remove_file(path).ok();
@@ -149,7 +149,7 @@ mod tests {
         let table = create_table();
         let mut display = HashMap::<String, String>::new();
         display.insert(String::from("row1"), String::from("displayed"));
-        let csv = CSV {};
+        let mut csv = CSV {};
 
         let path = "export/2024_10.csv";
         remove_file(path).ok();

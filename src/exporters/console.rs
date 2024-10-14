@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     error::Error,
+    io::{self, Stdout, Write},
 };
 
 use chrono::{DateTime, Datelike, Utc};
@@ -11,7 +12,17 @@ use crate::tablers::{MyTable, Table};
 
 use super::Exporter;
 
-pub struct Console {}
+pub struct Console<W: Write> {
+    writer: W,
+}
+
+impl Console<Stdout> {
+    pub fn stdout_output() -> Console<Stdout> {
+        Console {
+            writer: io::stdout(),
+        }
+    }
+}
 
 fn build_month_table(
     month: &DateTime<Utc>,
@@ -44,20 +55,20 @@ fn build_month_table(
     ptable
 }
 
-impl<'a> Exporter<'a> for Console {
+impl<'a, W: Write + 'a> Exporter<'a> for Console<W> {
     type Table = MyTable<u8>
     where
         Self: 'a;
 
     fn export(
-        &self,
+        &mut self,
         table: &Self::Table,
         _: &HashMap<String, String>,
     ) -> Result<(), Box<dyn Error>> {
         let months = table.group_by_month();
 
         for (k, v) in months.iter() {
-            println!("{}", build_month_table(&k, &v, table));
+            writeln!(self.writer, "{}", build_month_table(&k, &v, table))?;
         }
         Ok(())
     }
@@ -143,5 +154,89 @@ impl std::fmt::Display for FormattedTable {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use chrono::{TimeZone, Utc};
+    use io::Cursor;
+
+    use super::*;
+
+    fn create_table() -> MyTable<u8> {
+        let mut table = MyTable::<u8>::default();
+        table.insert(
+            String::from("row1"),
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            8.into(),
+        );
+        table.insert(
+            String::from("row2"),
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            9.into(),
+        );
+        table.insert(
+            String::from("row3"),
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            10.into(),
+        );
+
+        table.insert(
+            String::from("row1"),
+            Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
+            8.into(),
+        );
+        table.insert(
+            String::from("row2"),
+            Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
+            9.into(),
+        );
+        table.insert(
+            String::from("row3"),
+            Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
+            10.into(),
+        );
+
+        table.insert(
+            String::from("row1"),
+            Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
+            8.into(),
+        );
+        table.insert(
+            String::from("row2"),
+            Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
+            9.into(),
+        );
+        table.insert(
+            String::from("row3"),
+            Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
+            10.into(),
+        );
+
+        table
+    }
+
+    #[test]
+    fn stdout_works() {
+        let table = create_table();
+        let display = HashMap::<String, String>::new();
+        let mut csv = Console::stdout_output();
+
+        csv.export(&table, &display).unwrap();
+    }
+
+    #[test]
+    fn no_display() {
+        let table = create_table();
+        let display = HashMap::<String, String>::new();
+        let mut v = Vec::<u8>::new();
+        let writer = Cursor::new(&mut v);
+        let mut csv = Console { writer };
+
+        csv.export(&table, &display).unwrap();
+
+        assert_eq!(String::from_utf8(v).unwrap(), String::from("\u{1b}[38;2;68;68;68m+---------+----+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m 2024 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m 12 \u{1b}[38;2;68;68;68m|\u{1b}[0m 13 \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row1    \u{1b}[38;2;68;68;68m|\u{1b}[0m 8  \u{1b}[38;2;68;68;68m|\u{1b}[0m 8  \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row2    \u{1b}[38;2;68;68;68m|\u{1b}[0m 9  \u{1b}[38;2;68;68;68m|\u{1b}[0m 9  \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row3    \u{1b}[38;2;68;68;68m|\u{1b}[0m 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+\n\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m 2024 11 \u{1b}[38;2;68;68;68m|\u{1b}[0m 13 \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row1    \u{1b}[38;2;68;68;68m|\u{1b}[0m 8  \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row2    \u{1b}[38;2;68;68;68m|\u{1b}[0m 9  \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row3    \u{1b}[38;2;68;68;68m|\u{1b}[0m 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+\n\u{1b}[0m\n"));
     }
 }
