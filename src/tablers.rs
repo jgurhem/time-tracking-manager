@@ -44,7 +44,7 @@ pub trait Table {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MyTable<T> {
     row_headers: HashSet<String>,
     col_headers: HashSet<DateTime<Utc>>,
