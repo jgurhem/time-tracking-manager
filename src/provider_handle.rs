@@ -84,7 +84,7 @@ impl ProviderHandle {
 
     pub fn export(
         &self,
-        exporter: Box<dyn Exporter<Table = MyTable<u8>>>,
+        mut exporter: Box<dyn Exporter<Table = MyTable<u8>>>,
     ) -> Result<(), Box<dyn Error>> {
         exporter.export(&self.table, &self.display)?;
         Ok(())
@@ -179,7 +179,7 @@ mod tests {
             Self: 'a;
 
         fn export(
-            &self,
+            &mut self,
             _: &Self::Table,
             _: &HashMap<String, String>,
         ) -> Result<(), Box<dyn Error>> {

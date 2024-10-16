@@ -215,7 +215,7 @@ impl<'a> Exporter<'a> for Progessi {
         Self: 'a;
 
     fn export(
-        &self,
+        &mut self,
         table: &Self::Table,
         display: &HashMap<String, String>,
     ) -> Result<(), Box<dyn Error>> {
