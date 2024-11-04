@@ -74,7 +74,7 @@ impl ProviderHandle {
             .entries
             .clone()
             .into_iter()
-            .filter(|x| predicate_filter(&x, &param))
+            .filter(|x| predicate_filter(x, &param))
             .map(|x| renames.predicate_rename(x))
             .collect();
 
@@ -211,7 +211,7 @@ mod tests {
         );
         handle.download_entries().await?;
         handle.process()?;
-        let exporter = Box::new(TestExporter::default());
+        let exporter = Box::new(TestExporter);
         handle.export(exporter)?;
         Ok(())
     }

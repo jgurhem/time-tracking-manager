@@ -25,20 +25,14 @@ impl<'a> Tabler<'a> for Proportional {
         for e in entries {
             let d = e.get_start_day();
 
-            match delta.insert(e.to_project___task(), d, e.duration()) {
-                Some(old) => {
-                    let new = delta.get_mut(e.to_project___task(), d).unwrap();
-                    *new += old;
-                }
-                None => {}
+            if let Some(old) = delta.insert(e.to_project_task(), d, e.duration()) {
+                let new = delta.get_mut(e.to_project_task(), d).unwrap();
+                *new += old;
             }
 
-            match days.insert(d, e.duration()) {
-                Some(old) => {
-                    let new = days.get_mut(&d).unwrap();
-                    *new += old;
-                }
-                None => {}
+            if let Some(old) = days.insert(d, e.duration()) {
+                let new = days.get_mut(&d).unwrap();
+                *new += old;
             }
         }
 
@@ -63,12 +57,9 @@ impl<'a> Tabler<'a> for Proportional {
             for d in table.col_headers() {
                 let v = table.get(s.to_string(), *d);
 
-                match days.insert(*d, v) {
-                    Some(old) => {
-                        let new = days.get_mut(&d).unwrap();
-                        *new += old;
-                    }
-                    None => {}
+                if let Some(old) = days.insert(*d, v) {
+                    let new = days.get_mut(d).unwrap();
+                    *new += old;
                 }
             }
         }
@@ -76,7 +67,7 @@ impl<'a> Tabler<'a> for Proportional {
         let mut rng = StdRng::seed_from_u64(1);
 
         // Randomly adjust values so that total per day is 100
-        for d in days.clone().keys().into_iter() {
+        for d in days.clone().keys() {
             let n = *days.entry(*d).or_insert(100);
             if n == 100 {
                 continue;
@@ -159,7 +150,7 @@ mod tests {
         assert_eq!(table.col_headers().len(), 1);
         assert_eq!(table.row_headers().len(), 2);
         assert_eq!(table.get(p2.clone(), day), 50);
-        assert_eq!(table.get(e2.to_project___task().to_string(), day), 50);
+        assert_eq!(table.get(e2.to_project_task().to_string(), day), 50);
     }
 
     #[test]

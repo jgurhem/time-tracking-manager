@@ -15,7 +15,7 @@ struct RenameParam {
 
 impl RenameParam {
     pub fn build(s: &str) -> Result<RenameParam, Box<dyn Error>> {
-        let (lhs, rhs) = split_eq(&s)?;
+        let (lhs, rhs) = split_eq(s)?;
         let (p1, t1) = split___(lhs.as_str());
         let (p2, t2) = split___(rhs.as_str());
         Ok(RenameParam { p1, p2, t1, t2 })
@@ -31,7 +31,7 @@ impl Renames {
         let mut r = Vec::with_capacity(args.rename.len());
 
         for s in &args.rename {
-            r.push(RenameParam::build(&s)?);
+            r.push(RenameParam::build(s)?);
         }
 
         Ok(Renames { r })

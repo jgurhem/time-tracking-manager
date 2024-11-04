@@ -19,8 +19,8 @@ impl Entry {
         self.end - self.start
     }
 
-    pub fn to_project___task(&self) -> String {
-        if self.task == "" {
+    pub fn to_project_task(&self) -> String {
+        if self.task.is_empty() {
             self.project.to_string().clone()
         } else {
             format!("{}___{}", &self.project, &self.task)
@@ -77,7 +77,7 @@ mod tests {
             project: project.clone(),
             ..Default::default()
         };
-        assert_eq!(entry.to_project___task(), project)
+        assert_eq!(entry.to_project_task(), project)
     }
 
     #[test]
@@ -89,7 +89,7 @@ mod tests {
             task: task.clone(),
             ..Default::default()
         };
-        let pt = entry.to_project___task();
+        let pt = entry.to_project_task();
 
         assert!(pt.contains(&project), "{} should contains {}", pt, project);
         assert!(pt.contains(&task), "{} should contains {}", pt, task);
