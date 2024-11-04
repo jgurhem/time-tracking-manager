@@ -86,14 +86,13 @@ fn get_timelines(document: &Document) -> NodeList {
 
 fn get_missing_timelines(
     timelines: &NodeList,
-    rows: &Vec<String>,
+    rows: &[String],
     display: &HashMap<String, String>,
 ) -> Vec<String> {
-    let mut rows = rows.clone();
+    let mut rows = rows.to_owned();
 
-    for i in 0..rows.len() {
-        let row = &rows[i];
-        rows[i] = display.get(row).unwrap_or(row).to_lowercase();
+    for row in &mut rows {
+        *row = display.get(row).unwrap_or(row).to_lowercase();
     }
 
     for timeline in timelines.values() {
@@ -171,12 +170,12 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
 
         let o0 = get_options_from_select(&s0);
         let mut selected = String::new();
-        for i in 0..o0.len() {
-            if o0[i].contains(&val.to_lowercase()) {
+        for (i, s) in o0.iter().enumerate() {
+            if s.contains(&val.to_lowercase()) {
                 s0.set_selected_index(i.try_into().unwrap());
                 let event = Event::new("change").expect("Event should be created successfully");
                 let _ = s0.dispatch_event(&event);
-                selected = o0[i].clone();
+                selected = s.clone();
                 break;
             }
         }
@@ -194,12 +193,12 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
 
             let o1 = get_options_from_select(&s1);
             let mut selected = String::new();
-            for i in 0..o1.len() {
-                if o1[i].contains(&val.to_lowercase()) {
+            for (i, s) in o1.iter().enumerate() {
+                if s.contains(&val.to_lowercase()) {
                     s1.set_selected_index(i.try_into().unwrap());
                     let event = Event::new("change").expect("Event should be created successfully");
                     let _ = s1.dispatch_event(&event);
-                    selected = o1[i].clone();
+                    selected = s.clone();
                     break;
                 }
             }
@@ -424,7 +423,7 @@ impl<'a> Exporter<'a> for ProgessiPreview {
             for date in &col_headers {
                 let span = create_cell(
                     &self.document,
-                    &table.get(r.clone(), date.clone()).to_string(),
+                    &table.get(r.clone(), *date).to_string(),
                 );
                 row.append_child(&span).unwrap();
             }
@@ -507,7 +506,7 @@ impl ProgessiHandle {
 
         let clone = Arc::clone(&handle);
         let progessi = Progessi {
-            start: start.clone(),
+            start,
             document: document.clone(),
         };
         let on_click = EventListener::new(&fill, "click", move |_event| {
@@ -516,7 +515,7 @@ impl ProgessiHandle {
         });
         on_click.forget();
 
-        let progessi = ProgessiPreview::new(start.clone(), document.clone());
+        let progessi = ProgessiPreview::new(start, document.clone());
         let clone = Arc::clone(&handle);
         let on_click = EventListener::new(&preview, "click", move |_event| {
             let handle = clone.lock().unwrap();

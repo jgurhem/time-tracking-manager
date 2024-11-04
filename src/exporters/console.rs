@@ -29,7 +29,7 @@ fn build_month_table(
     dates: &BTreeSet<DateTime<Utc>>,
     t: &MyTable<u8>,
 ) -> FormattedTable {
-    let mut ptable = FormattedTable::new();
+    let mut ptable = FormattedTable::default();
     let ncol = dates.len() + 1;
 
     let mut headers: Vec<String> = Vec::with_capacity(ncol);
@@ -68,12 +68,13 @@ impl<'a, W: Write + 'a> Exporter<'a> for Console<W> {
         let months = table.group_by_month();
 
         for (k, v) in months.iter() {
-            writeln!(self.writer, "{}", build_month_table(&k, &v, table))?;
+            writeln!(self.writer, "{}", build_month_table(k, v, table))?;
         }
         Ok(())
     }
 }
 
+#[derive(Default)]
 pub struct FormattedTable {
     headers: Vec<String>,
     columns: usize,
@@ -81,14 +82,6 @@ pub struct FormattedTable {
 }
 
 impl FormattedTable {
-    pub fn new() -> FormattedTable {
-        FormattedTable {
-            headers: Vec::new(),
-            columns: 0,
-            rows: Vec::new(),
-        }
-    }
-
     pub fn set_header(&mut self, headers: Vec<String>) {
         if self.columns < headers.len() {
             self.columns = headers.len();

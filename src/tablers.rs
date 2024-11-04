@@ -35,9 +35,9 @@ pub trait Table {
             groups
                 .entry(m)
                 .and_modify(|e| {
-                    e.insert(h.clone());
+                    e.insert(*h);
                 })
-                .or_insert([h.clone()].into_iter().collect());
+                .or_insert([*h].into_iter().collect());
         }
 
         groups

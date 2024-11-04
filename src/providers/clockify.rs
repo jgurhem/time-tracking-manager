@@ -125,15 +125,15 @@ impl Provider for Clockify {
         let user = client.execute(req).await?.json::<User>().await?.id;
 
         let format = "%Y-%m-%dT%H:%M:%SZ";
-        let start = start.format(&format).to_string();
-        let end = end.format(&format).to_string();
+        let start = start.format(format).to_string();
+        let end = end.format(format).to_string();
 
         let mut page = 1;
         loop {
             let req = client.get(format!("{base}/workspaces/{workspace}/user/{user}/time-entries?start={start}&end={end}&hydrated=true&page={page}&page-size=100")).build()?;
             let body = client.execute(req).await?.text().await?;
             let res: Vec<Entry> = serde_json::from_str(&body).unwrap();
-            if body.is_empty() || res.len() == 0 {
+            if body.is_empty() || res.is_empty() {
                 break;
             }
             for e in res {

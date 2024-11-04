@@ -67,49 +67,49 @@ mod tests {
         table.insert(
             String::from("row1"),
             Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
-            8.into(),
+            8,
         );
         table.insert(
             String::from("row2"),
             Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
-            9.into(),
+            9,
         );
         table.insert(
             String::from("row3"),
             Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
-            10.into(),
+            10,
         );
 
         table.insert(
             String::from("row1"),
             Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
-            8.into(),
+            8,
         );
         table.insert(
             String::from("row2"),
             Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
-            9.into(),
+            9,
         );
         table.insert(
             String::from("row3"),
             Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
-            10.into(),
+            10,
         );
 
         table.insert(
             String::from("row1"),
             Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
-            8.into(),
+            8,
         );
         table.insert(
             String::from("row2"),
             Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
-            9.into(),
+            9,
         );
         table.insert(
             String::from("row3"),
             Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
-            10.into(),
+            10,
         );
 
         table
