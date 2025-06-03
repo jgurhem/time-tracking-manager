@@ -63,6 +63,20 @@ pub struct Args {
     #[arg(short, long, default_values_t = Vec::<String>::new())]
     #[serde(default)]
     pub display: Vec<String>,
+
+    /// Number of slots per day
+    #[arg(short, long, default_value_t = default_granularity())]
+    #[serde(default = "default_granularity")]
+    pub granularity: u8,
+
+    /// Number of slots per day
+    #[arg(long, default_value = "")]
+    #[serde(default)]
+    pub period: String,
+}
+
+const fn default_granularity() -> u8 {
+    100
 }
 
 impl Default for Args {
@@ -77,6 +91,8 @@ impl Default for Args {
             ignore_list: Default::default(),
             rename: Default::default(),
             display: Default::default(),
+            granularity: default_granularity(),
+            period: String::from(""),
         }
     }
 }

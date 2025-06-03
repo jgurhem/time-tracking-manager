@@ -71,6 +71,7 @@ impl Entry {
             start: DateTime::parse_from_rfc3339(&self.time_interval.start)
                 .unwrap()
                 .to_utc(),
+            absolute: None,
         }
     }
 }

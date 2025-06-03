@@ -100,7 +100,7 @@ pub trait Tabler<'a> {
     type Table: Table<Item<'a>: Display>
     where
         Self: 'a;
-    fn process(entries: Vec<Entry>) -> Self::Table;
+    fn process(&self, entries: Vec<Entry>) -> Self::Table;
 }
 
 #[cfg(test)]

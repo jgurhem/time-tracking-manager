@@ -14,3 +14,4 @@ pub trait Provider {
 }
 
 pub mod clockify;
+pub mod ics;

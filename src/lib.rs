@@ -10,6 +10,3 @@ pub mod tablers;
 pub mod utils;
 
 use tokio as _;
-
-// Indirectly used by a dependency that requires the non-default `js` feature.
-use getrandom as _;

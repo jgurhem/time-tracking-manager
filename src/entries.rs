@@ -12,6 +12,7 @@ pub struct Entry {
     pub tags: Vec<String>,
     pub end: DateTime<Utc>,
     pub start: DateTime<Utc>,
+    pub absolute: Option<f64>,
 }
 
 impl Entry {
