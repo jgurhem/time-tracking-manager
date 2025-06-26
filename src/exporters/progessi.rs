@@ -183,9 +183,19 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
         }
 
         if selected.is_empty() {
+            // set activité interne in the first select
+            for (i, s) in o0.iter().enumerate() {
+                if s.contains("activité interne") {
+                    s0.set_selected_index(i.try_into().unwrap());
+                    let event = Event::new("change").expect("Event should be created successfully");
+                    let _ = s0.dispatch_event(&event);
+                    break;
+                }
+            }
+
             let s1 = selects
                 .get(1)
-                .expect("First select should be available")
+                .expect("Second select (for Activité interne) should be available")
                 .dyn_into::<HtmlSelectElement>()
                 .expect("Node should be a select");
 
