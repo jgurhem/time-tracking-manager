@@ -132,6 +132,49 @@ mod tests {
     }
 
     #[test]
+    fn work_display_project_only() {
+        let w = Work {
+            project: String::from("proj"),
+            task: String::new(),
+        };
+        assert_eq!(w.to_string(), "proj");
+    }
+
+    #[test]
+    fn work_display_project_task() {
+        let w = Work {
+            project: String::from("proj"),
+            task: String::from("task"),
+        };
+        assert_eq!(w.to_string(), "proj___task");
+    }
+
+    #[test]
+    fn work_new_project_only() {
+        let w = Work::new(String::from("proj"));
+        assert_eq!(w.project, "proj");
+        assert_eq!(w.task, "");
+    }
+
+    #[test]
+    fn work_new_project_task() {
+        let w = Work::new(String::from("proj___task"));
+        assert_eq!(w.project, "proj");
+        assert_eq!(w.task, "task");
+    }
+
+    #[test]
+    fn extended_desc() {
+        let entry = Entry {
+            project: String::from("proj"),
+            task: String::from("task"),
+            description: String::from("desc"),
+            ..Default::default()
+        };
+        assert_eq!(entry.to_extended_desc(), "proj___taskdesc");
+    }
+
+    #[test]
     fn get_start_day() {
         let now = Utc.with_ymd_and_hms(2024, 10, 12, 10, 11, 12).unwrap();
         let entry = Entry {

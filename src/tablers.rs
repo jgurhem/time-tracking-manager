@@ -194,4 +194,35 @@ mod tests {
         );
         assert_eq!(0, v);
     }
+
+    #[test]
+    fn new_stores_entries() {
+        let entry = Entry::default();
+        let t: MyTable<u8> = MyTable::new(vec![entry.clone()]);
+        assert_eq!(t.entries(), &vec![entry]);
+    }
+
+    #[test]
+    fn group_by_month_single_month() {
+        let mut t: MyTable<u8> = MyTable::default();
+        let d1 = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap();
+        let d2 = Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap();
+        t.insert(Work::default(), d1, 1);
+        t.insert(Work::default(), d2, 2);
+        let groups = t.group_by_month();
+        assert_eq!(groups.len(), 1);
+        let key = Utc.with_ymd_and_hms(2024, 10, 1, 0, 0, 0).unwrap();
+        assert_eq!(groups[&key].len(), 2);
+    }
+
+    #[test]
+    fn group_by_month_two_months() {
+        let mut t: MyTable<u8> = MyTable::default();
+        let d1 = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap();
+        let d2 = Utc.with_ymd_and_hms(2024, 11, 5, 0, 0, 0).unwrap();
+        t.insert(Work::default(), d1, 1);
+        t.insert(Work::default(), d2, 2);
+        let groups = t.group_by_month();
+        assert_eq!(groups.len(), 2);
+    }
 }

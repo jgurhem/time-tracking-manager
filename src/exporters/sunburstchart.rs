@@ -129,6 +129,135 @@ fn to_dataframe(table: &MyTable<u8>) -> Vec<DataPoint> {
         .collect()
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::entries::Entry;
+    use crate::tablers::proportional::Proportional;
+    use crate::tablers::Tabler;
+    use chrono::{TimeDelta, TimeZone, Utc};
+
+    fn make_entry(
+        project: &str,
+        task: &str,
+        description: &str,
+        start_hour: u32,
+        hours: i64,
+    ) -> Entry {
+        let start = Utc
+            .with_ymd_and_hms(2024, 10, 12, start_hour, 0, 0)
+            .unwrap();
+        Entry {
+            project: project.to_string(),
+            task: task.to_string(),
+            description: description.to_string(),
+            start,
+            end: start + TimeDelta::hours(hours),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn convert_empty() {
+        let table = Proportional::default().process(vec![]);
+        assert!(convert(&table).is_empty());
+    }
+
+    #[test]
+    fn convert_project_only() {
+        let entry = make_entry("proj", "", "meeting", 9, 2);
+        let table = Proportional::default().process(vec![entry]);
+        let nodes = convert(&table);
+        // project-only: text = project name; one description child
+        let expected = SunburstNode::new("proj").children(vec![SunburstNode::new("proj")
+            .value(100.0)
+            .children(vec![SunburstNode::new("meeting").value(100.0)])]);
+        assert_eq!(nodes, vec![expected]);
+    }
+
+    #[test]
+    fn convert_project_with_task() {
+        let entry = make_entry("proj", "task", "work", 9, 2);
+        let table = Proportional::default().process(vec![entry]);
+        let nodes = convert(&table);
+        // task present: text = task name
+        let expected = SunburstNode::new("proj").children(vec![SunburstNode::new("task")
+            .value(100.0)
+            .children(vec![SunburstNode::new("work").value(100.0)])]);
+        assert_eq!(nodes, vec![expected]);
+    }
+
+    #[test]
+    fn convert_two_projects() {
+        // Equal durations → each gets 50 slots; sorted by project name
+        let e1 = make_entry("proj1", "", "meeting", 9, 4);
+        let e2 = make_entry("proj2", "", "review", 13, 4);
+        let table = Proportional::default().process(vec![e1, e2]);
+        let nodes = convert(&table);
+        let expected = vec![
+            SunburstNode::new("proj1").children(vec![SunburstNode::new("proj1")
+                .value(50.0)
+                .children(vec![SunburstNode::new("meeting").value(50.0)])]),
+            SunburstNode::new("proj2").children(vec![SunburstNode::new("proj2")
+                .value(50.0)
+                .children(vec![SunburstNode::new("review").value(50.0)])]),
+        ];
+        assert_eq!(nodes, expected);
+    }
+
+    #[test]
+    fn convert_merges_duplicate_descriptions() {
+        // Two entries with identical extended_desc are merged; skip(1) branch is covered
+        let e1 = make_entry("proj", "", "meeting", 9, 2);
+        let e2 = make_entry("proj", "", "meeting", 11, 2);
+        let table = Proportional::default().process(vec![e1, e2]);
+        let nodes = convert(&table);
+        // Still one project node, one description child with value 100
+        let expected = SunburstNode::new("proj").children(vec![SunburstNode::new("proj")
+            .value(100.0)
+            .children(vec![SunburstNode::new("meeting").value(100.0)])]);
+        assert_eq!(nodes, vec![expected]);
+    }
+
+    #[test]
+    fn to_dataframe_empty() {
+        let table = Proportional::default().process(vec![]);
+        assert!(to_dataframe(&table).is_empty());
+    }
+
+    #[test]
+    fn to_dataframe_single_project() {
+        let entry = make_entry("proj", "", "work", 9, 8);
+        let table = Proportional::default().process(vec![entry]);
+        let data = to_dataframe(&table);
+        // 8h = 480 min, 100%
+        assert_eq!(
+            data,
+            vec![DataPoint::Item(
+                DataPointItem::new(480i64).name("proj (100.00%)")
+            )]
+        );
+    }
+
+    #[test]
+    fn to_dataframe_two_projects_sorted_descending() {
+        // Different durations so sort order is deterministic (larger first)
+        let e1 = make_entry("proj1", "", "a", 9, 6); // 360 min, 75%
+        let e2 = make_entry("proj2", "", "b", 15, 2); // 120 min, 25%
+        let table = Proportional::default().process(vec![e1, e2]);
+        let data = to_dataframe(&table);
+        assert_eq!(data.len(), 2);
+        assert_eq!(
+            data[0],
+            DataPoint::Item(DataPointItem::new(360i64).name("proj1 (75.00%)"))
+        );
+        assert_eq!(
+            data[1],
+            DataPoint::Item(DataPointItem::new(120i64).name("proj2 (25.00%)"))
+        );
+    }
+}
+
 impl<'a> Exporter<'a> for SunburstChart {
     type Table = MyTable<u8>;
 
