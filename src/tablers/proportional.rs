@@ -58,6 +58,8 @@ impl<'a> Tabler<'a> for Proportional {
             self.process_slice(&mut table, entries);
         }
 
+        table.entries = entries;
+
         table
     }
 }
@@ -254,8 +256,7 @@ mod tests {
 
         assert_eq!(table.col_headers().len(), 1);
         assert_eq!(table.row_headers().len(), 2);
-        assert_eq!(table.get(p2.clone(), day), 50);
-        assert_eq!(table.get(e2.to_project_task().to_string(), day), 50);
+        assert_eq!(table.get(e2.to_project_task(), day), 50);
     }
 
     #[test]

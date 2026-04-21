@@ -9,6 +9,7 @@ use wasm_bindgen::{
 
 use crate::{
     args::Args,
+    entries::Work,
     provider_handle::ProviderHandle,
     tablers::{MyTable, Table},
     utils::end_of_month,
@@ -84,13 +85,18 @@ fn get_timelines(document: &Document) -> NodeList {
 
 fn get_missing_timelines(
     timelines: &NodeList,
-    rows: &[String],
+    rows: &[Work],
     display: &HashMap<String, String>,
-) -> Vec<String> {
+) -> Vec<Work> {
     let mut rows = rows.to_owned();
 
     for row in &mut rows {
-        *row = display.get(row).unwrap_or(row).to_lowercase();
+        *row = Work::new(
+            display
+                .get(row.to_string().as_str())
+                .unwrap_or(&row.to_string())
+                .clone(),
+        );
     }
 
     for timeline in timelines.values() {
@@ -100,7 +106,7 @@ fn get_missing_timelines(
             .expect("Timeline should be a div element");
         let name = get_selected_from_timeline(&timeline).to_lowercase();
         for i in 0..rows.len() {
-            if name.contains(&rows[i]) {
+            if name.contains(&rows[i].to_string().to_lowercase()) {
                 rows.remove(i);
                 break;
             }
@@ -125,7 +131,7 @@ fn get_options_from_select(select: &HtmlSelectElement) -> Vec<String> {
         .collect()
 }
 
-fn add_timelines(document: &Document, timelines: &Vec<String>) {
+fn add_timelines(document: &Document, timelines: &Vec<Work>) {
     let element = document
         .query_selector(".fc-addcontrol")
         .expect("element containing add timeline button was not found")
@@ -169,7 +175,7 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
         let o0 = get_options_from_select(&s0);
         let mut selected = String::new();
         for (i, s) in o0.iter().enumerate() {
-            if s.contains(&val.to_lowercase()) {
+            if s.contains(&val.to_string().to_lowercase()) {
                 s0.set_selected_index(i.try_into().unwrap());
                 let event = Event::new("change").expect("Event should be created successfully");
                 let _ = s0.dispatch_event(&event);
@@ -202,7 +208,7 @@ fn add_timelines(document: &Document, timelines: &Vec<String>) {
             let o1 = get_options_from_select(&s1);
             let mut selected = String::new();
             for (i, s) in o1.iter().enumerate() {
-                if s.contains(&val.to_lowercase()) {
+                if s.contains(&val.to_string().to_lowercase()) {
                     s1.set_selected_index(i.try_into().unwrap());
                     let event = Event::new("change").expect("Event should be created successfully");
                     let _ = s1.dispatch_event(&event);
@@ -231,7 +237,7 @@ impl<'a> Exporter<'a> for Progessi {
     ) -> Result<(), Box<dyn Error>> {
         let timelines = get_timelines(&self.document);
 
-        let row_headers: Vec<String> = table.row_headers().cloned().collect();
+        let row_headers: Vec<Work> = table.row_headers().cloned().collect();
         let missing = get_missing_timelines(&timelines, &row_headers, display);
 
         log!("missing {:?}", missing);
@@ -247,7 +253,12 @@ impl<'a> Exporter<'a> for Progessi {
             let name = get_selected_from_timeline(&timeline).to_lowercase();
 
             for h in &row_headers {
-                if name.contains(&display.get(h).unwrap_or(h).to_lowercase()) {
+                if name.contains(
+                    &display
+                        .get(h.to_string().as_str())
+                        .unwrap_or(&h.to_string())
+                        .to_lowercase(),
+                ) {
                     let days = timeline
                         .query_selector_all(".dayparent")
                         .expect("Timelines should have days");
@@ -294,7 +305,7 @@ impl<'a> Exporter<'a> for Progessi {
 }
 
 impl Progessi {
-    pub fn get(&self, table: &MyTable<u8>, row: String, day: u32) -> u8 {
+    pub fn get(&self, table: &MyTable<u8>, row: Work, day: u32) -> u8 {
         let day = Utc
             .with_ymd_and_hms(self.start.year(), self.start.month(), day, 0, 0, 0)
             .unwrap();
@@ -419,14 +430,17 @@ impl<'a> Exporter<'a> for ProgessiPreview {
             row.append_child(&cell).unwrap();
         }
 
-        let row_headers: Vec<String> = table.row_headers().cloned().collect();
+        let row_headers: Vec<Work> = table.row_headers().cloned().collect();
 
         for r in row_headers {
             let row = create_row(&self.document);
             preview.append_child(&row).unwrap();
             let cell = create_cell(
                 &self.document,
-                &display.get(&r).unwrap_or(&r).to_lowercase(),
+                &display
+                    .get(&r.to_string())
+                    .unwrap_or(&r.to_string())
+                    .to_lowercase(),
             );
             row.append_child(&cell).unwrap();
 

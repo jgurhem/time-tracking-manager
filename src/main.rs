@@ -2,7 +2,7 @@ use clap::Parser;
 use std::error::Error;
 use time_tracking_manager::{
     args::Args,
-    exporters::{console::Console, csv::CSV},
+    exporters::{console::Console, csv::CSV, sunburstchart::SunburstChart},
     provider_handle::ProviderHandle,
 };
 
@@ -17,6 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     handle.export(Box::new(Console::stdout_output())).unwrap();
     handle.export(Box::new(CSV {})).unwrap();
+    handle.export(Box::new(SunburstChart {})).unwrap();
 
     Ok(())
 }
