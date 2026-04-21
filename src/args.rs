@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::end_of_month;
 
+pub fn parse_args() -> Args {
+    let args = argfile::expand_args(argfile::parse_fromfile, '@').expect("failed to expand args");
+    Args::parse_from(args)
+}
+
 fn start_month() -> DateTime<Utc> {
     let utc = Utc::now();
     Utc.with_ymd_and_hms(utc.year(), utc.month(), 1, 0, 0, 0)

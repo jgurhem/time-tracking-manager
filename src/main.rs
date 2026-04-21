@@ -1,14 +1,13 @@
-use clap::Parser;
 use std::error::Error;
 use time_tracking_manager::{
-    args::Args,
+    args::parse_args,
     exporters::{aggregated::Aggregated, console::Console, csv::CSV, sunburstchart::SunburstChart},
     provider_handle::ProviderHandle,
 };
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let args = Args::parse();
+    let args = parse_args();
     dbg!(&args);
 
     let exporter_options = args.exporter_options.clone();
