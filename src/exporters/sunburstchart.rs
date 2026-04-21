@@ -4,6 +4,8 @@ use crate::tablers::{MyTable, Table};
 use std::collections::HashMap;
 use std::error::Error;
 
+use charming::datatype::{DataPoint, DataPointItem};
+use charming::series::Pie;
 use charming::HtmlRenderer;
 use charming::{
     component::Title,
@@ -103,6 +105,30 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
         .collect()
 }
 
+fn to_dataframe(table: &MyTable<u8>) -> Vec<DataPoint> {
+    let total = table
+        .entries()
+        .iter()
+        .map(|e| e.duration().num_minutes() as i64)
+        .sum::<i64>();
+    table
+        .entries()
+        .iter()
+        .into_group_map_by(|e| e.to_project_task())
+        .iter()
+        .map(|(k, v)| {
+            let s = v
+                .iter()
+                .map(|e| e.duration())
+                .sum::<TimeDelta>()
+                .num_minutes() as i64;
+            (s, format!("{} ({:.2}%)", k.to_string(), (s as f64 / total as f64) * 100.0))
+        })
+        .sorted_by(|a, b| b.0.cmp(&a.0))
+        .map(|(k, v)| DataPoint::Item(DataPointItem::new(k).name(v)))
+        .collect()
+}
+
 impl<'a> Exporter<'a> for SunburstChart {
     type Table = MyTable<u8>;
 
@@ -113,11 +139,12 @@ impl<'a> Exporter<'a> for SunburstChart {
     ) -> Result<(), Box<dyn Error>> {
         // Implementation for exporting to Sunburst format goes here
 
-        let chart = Chart::new()
+        let sb = Chart::new()
             .title(Title::new().text("Sunburst Chart").left("center"))
             .series(
                 Sunburst::new()
                     .data(convert(&table))
+                    .name("Work Distribution")
                     .levels(vec![
                         SunburstLevel::new()
                             .item_style(ItemStyle::new().border_width(4))
@@ -148,10 +175,30 @@ impl<'a> Exporter<'a> for SunburstChart {
                     ),
             );
 
+        let pie = Chart::new()
+            .title(Title::new().text("Pie Chart").left("center"))
+            .series(
+                Pie::new()
+                    .name("Access From")
+                    .radius("70%")
+                    .data(to_dataframe(&table))
+                    .emphasis(
+                        Emphasis::new()
+                            .item_style(
+                                ItemStyle::new()
+                                    .shadow_blur(10)
+                                    .shadow_offset_x(0)
+                                    .shadow_color("rgba(0, 0, 0, 0.5)"),
+                            )
+                            .label(Label::new().show(true).font_size(16).font_weight("bold")),
+                    ),
+            );
+
         // Chart dimension 1000x800.
-        let mut renderer = HtmlRenderer::new("my charts", 1000, 800);
+        let mut renderer = HtmlRenderer::new("my charts", 1200, 800);
         // Save the chart as HTML file.
-        renderer.save(&chart, "export/chart.html")?;
+        renderer.save(&sb, "export/chart.html")?;
+        renderer.save(&pie, "export/pie.html")?;
 
         Ok(())
     }
