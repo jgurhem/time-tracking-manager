@@ -58,6 +58,8 @@ impl<'a> Tabler<'a> for Proportional {
             self.process_slice(&mut table, entries);
         }
 
+        table.entries = entries;
+
         table
     }
 }

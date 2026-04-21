@@ -8,9 +8,7 @@ use chrono::{DateTime, Datelike, Utc};
 
 use colored::{Color, Colorize};
 
-use crate::{
-    tablers::{MyTable, Table},
-};
+use crate::tablers::{MyTable, Table};
 
 use super::Exporter;
 

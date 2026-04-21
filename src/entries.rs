@@ -53,6 +53,10 @@ impl Entry {
         }
     }
 
+    pub fn to_extended_desc(&self) -> String {
+        format!("{}{}", self.to_project_task(), self.description)
+    }
+
     pub fn get_start_day(&self) -> DateTime<Utc> {
         Utc.with_ymd_and_hms(
             self.start.year(),

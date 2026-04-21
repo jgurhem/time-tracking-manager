@@ -7,7 +7,7 @@ use std::{
 
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 
-use crate::entries::{Entry, Work};
+use crate::entries::{self, Entry, Work};
 
 pub trait Table {
     type RowIter<'a>: Iterator<Item = &'a Work>
@@ -22,6 +22,7 @@ pub trait Table {
 
     fn row_headers(&self) -> Self::RowIter<'_>;
     fn col_headers(&self) -> Self::ColIter<'_>;
+    fn entries(&self) -> &Vec<Entry>;
     fn get(&self, row: Work, col: DateTime<Utc>) -> Self::Item<'_>;
 
     fn group_by_month(&self) -> BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> {
@@ -49,6 +50,18 @@ pub struct MyTable<T> {
     row_headers: HashSet<Work>,
     col_headers: HashSet<DateTime<Utc>>,
     content: HashMap<(Work, DateTime<Utc>), T>,
+    entries: Vec<Entry>,
+}
+
+impl<T> MyTable<T> {
+    pub fn new(entries: Vec<Entry>) -> Self {
+        MyTable {
+            row_headers: HashSet::new(),
+            col_headers: HashSet::new(),
+            content: HashMap::new(),
+            entries,
+        }
+    }
 }
 
 impl<T: Clone + Default> Table for MyTable<T> {
@@ -78,6 +91,10 @@ impl<T: Clone + Default> Table for MyTable<T> {
             Some(v) => v.clone(),
             None => Default::default(),
         }
+    }
+
+    fn entries(&self) -> &Vec<Entry> {
+        &self.entries
     }
 }
 

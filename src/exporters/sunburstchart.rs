@@ -1,3 +1,4 @@
+use crate::entries::{Entry, Work};
 use crate::exporters::Exporter;
 use crate::tablers::{MyTable, Table};
 use std::collections::HashMap;
@@ -6,12 +7,11 @@ use std::error::Error;
 use charming::HtmlRenderer;
 use charming::{
     component::Title,
-    element::{
-        Emphasis, EmphasisFocus, ItemStyle, Label, LabelPosition, Sort,
-    },
+    element::{Emphasis, EmphasisFocus, ItemStyle, Label, LabelPosition, Sort},
     series::{Sunburst, SunburstLevel, SunburstNode},
     Chart,
 };
+use chrono::TimeDelta;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +19,36 @@ use serde::{Deserialize, Serialize};
 pub struct SunburstChart {}
 
 fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
+    let mut entries = table.entries().clone();
+    entries.sort_by(|a, b| a.to_extended_desc().cmp(&b.to_extended_desc()));
+
+    let entries = HashMap::<String, Entry>::from_iter(
+        table
+            .entries()
+            .iter()
+            .into_group_map_by(|e| e.to_extended_desc())
+            .iter()
+            .map(|(k, v)| {
+                let mut e = v.first().unwrap().clone().clone();
+
+                for entry in v.iter().skip(1) {
+                    let d = entry.duration().num_minutes() as u32;
+                    let prev = e.duration().num_minutes() as u32;
+                    let new_end = e.start + TimeDelta::minutes((d + prev) as i64);
+                    e.end = new_end;
+                }
+
+                (k.clone(), e)
+            }),
+    );
+
+    let entries = HashMap::<Work, Vec<&Entry>>::from_iter(
+        entries
+            .values()
+            .into_group_map_by(|e| e.to_project_task())
+            .into_iter(),
+    );
+
     table
         .row_headers()
         .sorted_by(|a, b| a.project.cmp(&b.project))
@@ -33,9 +63,35 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
                 }
 
                 if value > 0 {
-                    children.push(
-                        SunburstNode::new(format!("{}", work.task.clone())).value(value as f64),
+                    let text = if work.task.is_empty() {
+                        work.project.clone()
+                    } else {
+                        work.task.clone()
+                    };
+                    
+                    let mut node =
+                        SunburstNode::new(text).value(value as f64);
+
+                    let total_duration = entries
+                        .get(work)
+                        .unwrap_or(&Vec::new())
+                        .iter()
+                        .map(|e| e.duration().num_minutes() as f64)
+                        .sum::<f64>();
+
+                    node = node.children(
+                        entries
+                            .get(work)
+                            .unwrap_or(&Vec::new())
+                            .iter()
+                            .map(|e| {
+                                let d = e.duration().num_minutes() as f64 / total_duration * value as f64;
+                                SunburstNode::new(e.description.clone()).value(d)
+                            })
+                            .collect(),
                     );
+
+                    children.push(node);
                 }
             }
             if !children.is_empty() {
@@ -64,20 +120,25 @@ impl<'a> Exporter<'a> for SunburstChart {
                     .data(convert(&table))
                     .levels(vec![
                         SunburstLevel::new()
-                            .item_style(ItemStyle::new().border_width(2))
+                            .item_style(ItemStyle::new().border_width(4))
                             .label(Label::new().position(LabelPosition::Inside))
                             .r0("15%")
+                            .r("30%"),
+                        SunburstLevel::new()
+                            .item_style(ItemStyle::new().border_width(4))
+                            .label(Label::new().position(LabelPosition::Inside))
+                            .r0("30%")
                             .r("50%"),
                         SunburstLevel::new()
-                            .item_style(ItemStyle::new().border_width(2))
+                            .item_style(ItemStyle::new().border_width(4))
                             .label(Label::new().position(LabelPosition::Inside))
                             .r0("50%")
                             .r("70%"),
                         SunburstLevel::new()
-                            .item_style(ItemStyle::new().border_width(2))
+                            .item_style(ItemStyle::new().border_width(4))
                             .label(Label::new().position(LabelPosition::Inside))
                             .r0("70%")
-                            .r("80%"),
+                            .r("100%"),
                     ])
                     .sort(Sort::Descending)
                     .emphasis(
