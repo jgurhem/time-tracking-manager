@@ -41,7 +41,12 @@ impl<'a> Exporter<'a> for CSV {
             row_headers.sort();
             for r in row_headers {
                 let mut row: Vec<String> = Vec::with_capacity(ncol);
-                row.push(display.get(r).unwrap_or(r).clone());
+                row.push(
+                    display
+                        .get(r.to_string().as_str())
+                        .unwrap_or(&r.to_string())
+                        .clone(),
+                );
 
                 for d in dates {
                     row.push(table.get(r.clone(), *d).to_string());
@@ -61,54 +66,83 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use serial_test::serial;
 
+    use crate::entries::Work;
+
     use super::*;
 
     fn create_table() -> MyTable<u8> {
         let mut table = MyTable::<u8>::default();
         table.insert(
-            String::from("row1"),
+            Work {
+                project: String::from("row1"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
             8,
         );
         table.insert(
-            String::from("row2"),
+            Work {
+                project: String::from("row2"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
             9,
         );
         table.insert(
-            String::from("row3"),
+            Work {
+                project: String::from("row3"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
             10,
         );
 
         table.insert(
-            String::from("row1"),
+            Work {
+                project: String::from("row1"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
             8,
         );
         table.insert(
-            String::from("row2"),
+            Work {
+                project: String::from("row2"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
             9,
         );
         table.insert(
-            String::from("row3"),
+            Work {
+                project: String::from("row3"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap(),
             10,
         );
 
         table.insert(
-            String::from("row1"),
+            Work {
+                project: String::from("row1"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
             8,
         );
         table.insert(
-            String::from("row2"),
+            Work {
+                project: String::from("row2"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
             9,
         );
         table.insert(
-            String::from("row3"),
+            Work {
+                project: String::from("row3"),
+                task: "".to_string(),
+            },
             Utc.with_ymd_and_hms(2024, 11, 13, 0, 0, 0).unwrap(),
             10,
         );

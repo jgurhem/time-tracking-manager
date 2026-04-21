@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use chrono::{DateTime, Datelike, TimeDelta, TimeZone, Utc};
 
@@ -15,16 +15,41 @@ pub struct Entry {
     pub absolute: Option<f64>,
 }
 
+#[derive(Debug, PartialEq, Default, Clone, Eq, Hash, Ord, PartialOrd)]
+pub struct Work {
+    pub task: String,
+    pub project: String,
+}
+
+impl Display for Work {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.task.is_empty() {
+            write!(f, "{}", self.project)
+        } else {
+            write!(f, "{}___{}", self.project, self.task)
+        }
+    }
+}
+
+impl Work {
+    pub fn new(combined: String) -> Self {
+        let parts: Vec<&str> = combined.split("___").collect();
+        Work {
+            project: parts.get(0).unwrap_or(&"").to_string(),
+            task: parts.get(1).unwrap_or(&"").to_string(),
+        }
+    }
+}
+
 impl Entry {
     pub fn duration(&self) -> TimeDelta {
         self.end - self.start
     }
 
-    pub fn to_project_task(&self) -> String {
-        if self.task.is_empty() {
-            self.project.to_string()
-        } else {
-            format!("{}___{}", &self.project, &self.task)
+    pub fn to_project_task(&self) -> Work {
+        Work {
+            project: self.project.clone(),
+            task: self.task.clone(),
         }
     }
 
@@ -78,7 +103,13 @@ mod tests {
             project: project.clone(),
             ..Default::default()
         };
-        assert_eq!(entry.to_project_task(), project)
+        assert_eq!(
+            entry.to_project_task(),
+            Work {
+                project,
+                task: String::new()
+            }
+        )
     }
 
     #[test]
@@ -92,8 +123,8 @@ mod tests {
         };
         let pt = entry.to_project_task();
 
-        assert!(pt.contains(&project), "{} should contains {}", pt, project);
-        assert!(pt.contains(&task), "{} should contains {}", pt, task);
+        assert_eq!(pt.project, project);
+        assert_eq!(pt.task, task);
     }
 
     #[test]
