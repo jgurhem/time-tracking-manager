@@ -38,7 +38,7 @@ impl<'a> Tabler<'a> for Proportional {
         Self: 'a;
 
     fn process(&self, mut entries: Vec<crate::entries::Entry>) -> Self::Table {
-        assert!(SLOTS_PER_DAY % self.granularity == 0);
+        assert!(SLOTS_PER_DAY.is_multiple_of(self.granularity));
 
         entries.sort_by_key(crate::entries::Entry::get_start_day);
 
