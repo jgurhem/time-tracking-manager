@@ -35,7 +35,7 @@ impl Work {
     pub fn new(combined: String) -> Self {
         let parts: Vec<&str> = combined.split("___").collect();
         Work {
-            project: parts.get(0).unwrap_or(&"").to_string(),
+            project: parts.first().unwrap_or(&"").to_string(),
             task: parts.get(1).unwrap_or(&"").to_string(),
         }
     }

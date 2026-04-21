@@ -22,7 +22,7 @@ pub struct SunburstChart {}
 
 fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
     let mut entries = table.entries().clone();
-    entries.sort_by(|a, b| a.to_extended_desc().cmp(&b.to_extended_desc()));
+    entries.sort_by_key(|a| a.to_extended_desc());
 
     let entries = HashMap::<String, Entry>::from_iter(
         table
@@ -31,7 +31,7 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
             .into_group_map_by(|e| e.to_extended_desc())
             .iter()
             .map(|(k, v)| {
-                let mut e = v.first().unwrap().clone().clone();
+                let mut e = (*v.first().unwrap()).clone();
 
                 for entry in v.iter().skip(1) {
                     let d = entry.duration().num_minutes() as u32;
@@ -48,7 +48,6 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
         entries
             .values()
             .into_group_map_by(|e| e.to_project_task())
-            .into_iter(),
     );
 
     table
@@ -61,7 +60,7 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
             for work in works {
                 let mut value: i32 = 0;
                 for col in table.col_headers() {
-                    value += table.get(work.clone(), col.clone()) as i32;
+                    value += table.get(work.clone(), *col) as i32;
                 }
 
                 if value > 0 {
@@ -109,7 +108,7 @@ fn to_dataframe(table: &MyTable<u8>) -> Vec<DataPoint> {
     let total = table
         .entries()
         .iter()
-        .map(|e| e.duration().num_minutes() as i64)
+        .map(|e| e.duration().num_minutes())
         .sum::<i64>();
     table
         .entries()
@@ -121,12 +120,12 @@ fn to_dataframe(table: &MyTable<u8>) -> Vec<DataPoint> {
                 .iter()
                 .map(|e| e.duration())
                 .sum::<TimeDelta>()
-                .num_minutes() as i64;
+                .num_minutes();
             (
                 s,
                 format!(
                     "{} ({:.2}%)",
-                    k.to_string(),
+                    k,
                     (s as f64 / total as f64) * 100.0
                 ),
             )
@@ -150,7 +149,7 @@ impl<'a> Exporter<'a> for SunburstChart {
             .title(Title::new().text("Sunburst Chart").left("center"))
             .series(
                 Sunburst::new()
-                    .data(convert(&table))
+                    .data(convert(table))
                     .name("Work Distribution")
                     .levels(vec![
                         SunburstLevel::new()
@@ -188,7 +187,7 @@ impl<'a> Exporter<'a> for SunburstChart {
                 Pie::new()
                     .name("Access From")
                     .radius("70%")
-                    .data(to_dataframe(&table))
+                    .data(to_dataframe(table))
                     .emphasis(
                         Emphasis::new()
                             .item_style(

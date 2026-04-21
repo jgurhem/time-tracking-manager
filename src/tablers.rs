@@ -7,7 +7,7 @@ use std::{
 
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 
-use crate::entries::{self, Entry, Work};
+use crate::entries::{Entry, Work};
 
 pub trait Table {
     type RowIter<'a>: Iterator<Item = &'a Work>
