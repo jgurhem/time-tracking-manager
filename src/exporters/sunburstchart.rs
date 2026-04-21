@@ -122,7 +122,14 @@ fn to_dataframe(table: &MyTable<u8>) -> Vec<DataPoint> {
                 .map(|e| e.duration())
                 .sum::<TimeDelta>()
                 .num_minutes() as i64;
-            (s, format!("{} ({:.2}%)", k.to_string(), (s as f64 / total as f64) * 100.0))
+            (
+                s,
+                format!(
+                    "{} ({:.2}%)",
+                    k.to_string(),
+                    (s as f64 / total as f64) * 100.0
+                ),
+            )
         })
         .sorted_by(|a, b| b.0.cmp(&a.0))
         .map(|(k, v)| DataPoint::Item(DataPointItem::new(k).name(v)))
