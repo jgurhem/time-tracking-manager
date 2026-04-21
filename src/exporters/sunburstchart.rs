@@ -68,9 +68,8 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
                     } else {
                         work.task.clone()
                     };
-                    
-                    let mut node =
-                        SunburstNode::new(text).value(value as f64);
+
+                    let mut node = SunburstNode::new(text).value(value as f64);
 
                     let total_duration = entries
                         .get(work)
@@ -85,7 +84,8 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
                             .unwrap_or(&Vec::new())
                             .iter()
                             .map(|e| {
-                                let d = e.duration().num_minutes() as f64 / total_duration * value as f64;
+                                let d = e.duration().num_minutes() as f64 / total_duration
+                                    * value as f64;
                                 SunburstNode::new(e.description.clone()).value(d)
                             })
                             .collect(),

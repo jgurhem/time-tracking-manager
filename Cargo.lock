@@ -178,9 +178,12 @@ checksum = "df19cf7d4540f4db08203dce5171421fdfc5e83ea3f14d7b5329f0dbff3bf3c2"
 dependencies = [
  "charming_macros",
  "handlebars",
+ "js-sys",
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "serde_with",
+ "wasm-bindgen",
 ]
 
 [[package]]
