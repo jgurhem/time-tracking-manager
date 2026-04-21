@@ -73,6 +73,11 @@ pub struct Args {
     #[arg(long, default_value = "")]
     #[serde(default)]
     pub period: String,
+
+    /// Options passed to exporters (e.g. aggregation_level=project)
+    #[arg(short('E'), long)]
+    #[serde(default)]
+    pub exporter_options: Vec<String>,
 }
 
 const fn default_granularity() -> u8 {
@@ -93,6 +98,7 @@ impl Default for Args {
             display: Default::default(),
             granularity: default_granularity(),
             period: String::from(""),
+            exporter_options: Default::default(),
         }
     }
 }

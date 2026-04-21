@@ -1,3 +1,4 @@
+pub mod aggregated;
 pub mod console;
 pub mod csv;
 pub mod progessi;
