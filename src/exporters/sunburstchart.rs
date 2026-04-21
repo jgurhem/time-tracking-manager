@@ -45,9 +45,7 @@ fn convert(table: &MyTable<u8>) -> Vec<SunburstNode> {
     );
 
     let entries = HashMap::<Work, Vec<&Entry>>::from_iter(
-        entries
-            .values()
-            .into_group_map_by(|e| e.to_project_task())
+        entries.values().into_group_map_by(|e| e.to_project_task()),
     );
 
     table
@@ -123,11 +121,7 @@ fn to_dataframe(table: &MyTable<u8>) -> Vec<DataPoint> {
                 .num_minutes();
             (
                 s,
-                format!(
-                    "{} ({:.2}%)",
-                    k,
-                    (s as f64 / total as f64) * 100.0
-                ),
+                format!("{} ({:.2}%)", k, (s as f64 / total as f64) * 100.0),
             )
         })
         .sorted_by(|a, b| b.0.cmp(&a.0))
