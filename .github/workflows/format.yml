@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
     - name: Check Rust formatting
       run: cargo fmt --all -- --check
 
@@ -22,8 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - run: rustup component add clippy
+    - uses: Swatinem/rust-cache@v2
     - name: Check Rust linting
-      run: cargo clippy -- -D warnings
-    - name: Check Rust dependencies
-      run: cargo clippy --lib --no-deps -- -Dunused-crate-dependencies
+      run: cargo clippy --no-deps -- -D warnings -D unused-crate-dependencies
