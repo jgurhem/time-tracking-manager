@@ -23,17 +23,18 @@ impl<'a> Exporter<'a> for CSV {
         let months = table.group_by_month();
 
         for (month, dates) in months.iter() {
-            let ncol = dates.len() + 1;
             create_dir_all("export").ok();
             let mut wtr =
                 Writer::from_path(format!("export/{}_{}.csv", month.year(), month.month()))
                     .unwrap();
 
+            let ncol = dates.len() + 2;
             let mut headers: Vec<String> = Vec::with_capacity(ncol);
             headers.push(month.format("%Y %m").to_string());
             for d in dates {
                 headers.push(d.day().to_string());
             }
+            headers.push("Total".to_string());
             let headers = headers;
             wtr.write_record(headers).unwrap();
 
@@ -51,6 +52,11 @@ impl<'a> Exporter<'a> for CSV {
                 for d in dates {
                     row.push(table.get(r.clone(), *d).to_string());
                 }
+                let total: u32 = dates
+                    .iter()
+                    .map(|d| u32::from(table.get(r.clone(), *d)))
+                    .sum();
+                row.push(total.to_string());
                 wtr.write_record(row).unwrap();
             }
             wtr.flush().unwrap();
@@ -164,7 +170,7 @@ mod tests {
         remove_file(path).ok();
         assert_eq!(
             content,
-            String::from("2024 10,12,13\nrow1,8,8\nrow2,9,9\nrow3,10,10\n")
+            String::from("2024 10,12,13,Total\nrow1,8,8,16\nrow2,9,9,18\nrow3,10,10,20\n")
         );
 
         let path = "export/2024_11.csv";
@@ -174,7 +180,7 @@ mod tests {
         remove_file(path).ok();
         assert_eq!(
             content,
-            String::from("2024 11,13\nrow1,8\nrow2,9\nrow3,10\n")
+            String::from("2024 11,13,Total\nrow1,8,8\nrow2,9,9\nrow3,10,10\n")
         );
     }
 
@@ -193,7 +199,7 @@ mod tests {
         remove_file(path).ok();
         assert_eq!(
             content,
-            String::from("2024 10,12,13\ndisplayed,8,8\nrow2,9,9\nrow3,10,10\n")
+            String::from("2024 10,12,13,Total\ndisplayed,8,8,16\nrow2,9,9,18\nrow3,10,10,20\n")
         );
 
         let path = "export/2024_11.csv";
@@ -203,7 +209,7 @@ mod tests {
         remove_file(path).ok();
         assert_eq!(
             content,
-            String::from("2024 11,13\ndisplayed,8\nrow2,9\nrow3,10\n")
+            String::from("2024 11,13,Total\ndisplayed,8,8\nrow2,9,9\nrow3,10,10\n")
         );
     }
 }

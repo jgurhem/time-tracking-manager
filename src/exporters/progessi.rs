@@ -429,6 +429,8 @@ impl<'a> Exporter<'a> for ProgessiPreview {
             let cell = create_cell(&self.document, &date.day().to_string());
             row.append_child(&cell).unwrap();
         }
+        row.append_child(&create_cell(&self.document, "Total"))
+            .unwrap();
 
         let row_headers: Vec<Work> = table.row_headers().cloned().collect();
 
@@ -448,6 +450,8 @@ impl<'a> Exporter<'a> for ProgessiPreview {
                 let span = create_cell(&self.document, &table.get(r.clone(), *date).to_string());
                 row.append_child(&span).unwrap();
             }
+            row.append_child(&create_cell(&self.document, &table.row_sum(&r).to_string()))
+                .unwrap();
         }
 
         Ok(())
