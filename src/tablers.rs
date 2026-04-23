@@ -3,6 +3,7 @@ pub mod proportional;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     fmt::Display,
+    iter::Sum,
 };
 
 use chrono::{DateTime, Datelike, TimeZone, Utc};
@@ -19,11 +20,21 @@ pub trait Table {
     type Item<'a>
     where
         Self: 'a;
+    type SumItem: Display + Default + Sum;
 
     fn row_headers(&self) -> Self::RowIter<'_>;
     fn col_headers(&self) -> Self::ColIter<'_>;
     fn entries(&self) -> &Vec<Entry>;
     fn get(&self, row: Work, col: DateTime<Utc>) -> Self::Item<'_>;
+
+    fn row_sum(&self, row: &Work) -> Self::SumItem
+    where
+        for<'a> Self::Item<'a>: Into<Self::SumItem>,
+    {
+        self.col_headers()
+            .map(|col| self.get(row.clone(), *col).into())
+            .sum()
+    }
 
     fn group_by_month(&self) -> BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> {
         let mut groups: BTreeMap<DateTime<Utc>, BTreeSet<DateTime<Utc>>> = BTreeMap::new();
@@ -77,6 +88,7 @@ impl<T: Clone + Default> Table for MyTable<T> {
         = T
     where
         Self: 'a;
+    type SumItem = u32;
 
     fn row_headers(&self) -> Self::RowIter<'_> {
         self.row_headers.iter()
@@ -200,6 +212,20 @@ mod tests {
         let entry = Entry::default();
         let t: MyTable<u8> = MyTable::new(vec![entry.clone()]);
         assert_eq!(t.entries(), &vec![entry]);
+    }
+
+    #[test]
+    fn row_sum_two_cols() {
+        let mut t: MyTable<u8> = MyTable::default();
+        let d1 = Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap();
+        let d2 = Utc.with_ymd_and_hms(2024, 10, 13, 0, 0, 0).unwrap();
+        let work = Work {
+            task: String::from("task"),
+            project: String::from("project"),
+        };
+        t.insert(work.clone(), d1, 30u8);
+        t.insert(work.clone(), d2, 40u8);
+        assert_eq!(t.row_sum(&work), 70);
     }
 
     #[test]
