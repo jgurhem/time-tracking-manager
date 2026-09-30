@@ -8,7 +8,6 @@ use time_tracking_manager::{
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = parse_args();
-    dbg!(&args);
 
     let exporter_options = args.exporter_options.clone();
     let mut handle = ProviderHandle::new(args).expect("Provider should be available");
