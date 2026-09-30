@@ -44,13 +44,17 @@ fn build_month_table(
     let mut row_headers = t.row_headers().collect::<Vec<_>>();
     row_headers.sort();
     for r in row_headers {
+        let total: u32 = dates.iter().map(|d| u32::from(t.get(r.clone(), *d))).sum();
+        if total == 0 {
+            continue;
+        }
+
         let mut row: Vec<String> = Vec::with_capacity(ncol);
         row.push(r.to_string());
 
         for d in dates {
             row.push(t.get(r.clone(), *d).to_string());
         }
-        let total: u32 = dates.iter().map(|d| u32::from(t.get(r.clone(), *d))).sum();
         row.push(total.to_string());
         ptable.add_row(row);
     }
@@ -267,5 +271,29 @@ mod tests {
         csv.export(&table, &display).unwrap();
 
         assert_eq!(String::from_utf8_lossy(&v), String::from("\u{1b}[38;2;68;68;68m+---------+----+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m 2024 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m 12 \u{1b}[38;2;68;68;68m|\u{1b}[0m 13 \u{1b}[38;2;68;68;68m|\u{1b}[0m Total \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row1    \u{1b}[38;2;68;68;68m|\u{1b}[0m 8  \u{1b}[38;2;68;68;68m|\u{1b}[0m 8  \u{1b}[38;2;68;68;68m|\u{1b}[0m 16    \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row2    \u{1b}[38;2;68;68;68m|\u{1b}[0m 9  \u{1b}[38;2;68;68;68m|\u{1b}[0m 9  \u{1b}[38;2;68;68;68m|\u{1b}[0m 18    \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row3    \u{1b}[38;2;68;68;68m|\u{1b}[0m 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m 20    \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+----+-------+\n\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m 2024 11 \u{1b}[38;2;68;68;68m|\u{1b}[0m 13 \u{1b}[38;2;68;68;68m|\u{1b}[0m Total \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row1    \u{1b}[38;2;68;68;68m|\u{1b}[0m 8  \u{1b}[38;2;68;68;68m|\u{1b}[0m 8     \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row2    \u{1b}[38;2;68;68;68m|\u{1b}[0m 9  \u{1b}[38;2;68;68;68m|\u{1b}[0m 9     \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+-------+\n\u{1b}[0m\u{1b}[38;2;68;68;68m|\u{1b}[0m row3    \u{1b}[38;2;68;68;68m|\u{1b}[0m 10 \u{1b}[38;2;68;68;68m|\u{1b}[0m 10    \u{1b}[38;2;68;68;68m|\u{1b}[0m\n\u{1b}[38;2;68;68;68m+---------+----+-------+\n\u{1b}[0m\n"));
+    }
+
+    #[test]
+    fn skip_rows_with_zero_total() {
+        let mut table = create_table();
+        table.insert(
+            Work {
+                project: String::from("row4"),
+                task: "".to_string(),
+            },
+            Utc.with_ymd_and_hms(2024, 10, 12, 0, 0, 0).unwrap(),
+            5,
+        );
+        let display = HashMap::<String, String>::new();
+        let mut v = Vec::<u8>::new();
+        let writer = Cursor::new(&mut v);
+        let mut csv = Console { writer };
+
+        csv.export(&table, &display).unwrap();
+
+        let output = String::from_utf8_lossy(&v);
+        let (october, november) = output.split_once("2024 11").unwrap();
+        assert!(october.contains("row4"));
+        assert!(!november.contains("row4"));
     }
 }
