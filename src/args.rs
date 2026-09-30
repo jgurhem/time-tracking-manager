@@ -1,3 +1,5 @@
+use std::{env, ffi::OsString, path::PathBuf};
+
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
@@ -5,8 +7,29 @@ use serde::{Deserialize, Serialize};
 use crate::utils::end_of_month;
 
 pub fn parse_args() -> Args {
-    let args = argfile::expand_args(argfile::parse_fromfile, '@').expect("failed to expand args");
+    let args = with_default_argfile(env::args_os().collect(), default_argfile());
+    let args = argfile::expand_args_from(args.into_iter(), argfile::parse_fromfile, '@')
+        .expect("failed to expand args");
     Args::parse_from(args)
+}
+
+/// `$XDG_CONFIG_HOME/ttm/args`, or `~/.config/ttm/args` when `XDG_CONFIG_HOME` is not set
+fn default_argfile() -> Option<PathBuf> {
+    let config_dir = env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".config")))?;
+    Some(config_dir.join("ttm").join("args"))
+}
+
+/// Inserts the default argfile before command line arguments so that they take precedence
+fn with_default_argfile(mut args: Vec<OsString>, argfile: Option<PathBuf>) -> Vec<OsString> {
+    if let Some(argfile) = argfile.filter(|path| path.is_file()) {
+        eprintln!("Reading default arguments from {}", argfile.display());
+        let mut arg = OsString::from("@");
+        arg.push(argfile);
+        args.insert(1.min(args.len()), arg);
+    }
+    args
 }
 
 fn start_month() -> DateTime<Utc> {
@@ -20,7 +43,7 @@ fn end_month() -> DateTime<Utc> {
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[command(version, about, long_about = None)]
+#[command(version, about, long_about = None, args_override_self = true)]
 pub struct Args {
     /// Provider used to retrieve entries
     #[arg(short('P'), long)]
@@ -112,6 +135,10 @@ impl Default for Args {
 mod tests {
     use super::*;
 
+    fn os_args(args: &[&str]) -> Vec<OsString> {
+        args.iter().map(OsString::from).collect()
+    }
+
     #[test]
     fn default_deserialization() {
         let args = Args::default();
@@ -120,5 +147,31 @@ mod tests {
             serde_json::from_str("{\"provider\":\"clockify\"}")
                 .expect("valid json representing Args")
         )
+    }
+
+    #[test]
+    fn command_line_overrides_default_argfile() {
+        let argfile = env::temp_dir().join("ttm_command_line_overrides_default_argfile");
+        std::fs::write(&argfile, "-Pclockify\n-ptoken=secret\n-g4\n-IProject").unwrap();
+
+        let args = with_default_argfile(os_args(&["ttm", "-g8", "-IOther"]), Some(argfile.clone()));
+        let args =
+            argfile::expand_args_from(args.into_iter(), argfile::parse_fromfile, '@').unwrap();
+        let args = Args::parse_from(args);
+        std::fs::remove_file(&argfile).unwrap();
+
+        assert_eq!(args.provider, "clockify");
+        assert_eq!(args.provider_options, vec!["token=secret"]);
+        assert_eq!(args.granularity, 8);
+        assert_eq!(args.ignore_list, vec!["Project", "Other"]);
+    }
+
+    #[test]
+    fn missing_default_argfile_is_ignored() {
+        let args = os_args(&["ttm", "-Pclockify"]);
+        let missing = env::temp_dir().join("ttm_missing_default_argfile");
+
+        assert_eq!(with_default_argfile(args.clone(), Some(missing)), args);
+        assert_eq!(with_default_argfile(args.clone(), None), args);
     }
 }
