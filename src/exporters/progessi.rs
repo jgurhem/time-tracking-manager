@@ -1,10 +1,9 @@
 use std::{collections::HashMap, error::Error, rc::Rc, sync::Mutex};
 
 use chrono::{DateTime, Datelike, NaiveDate, TimeZone, Utc};
-use gloo::events::EventListener;
+use gloo::{events::EventListener, timers::future::TimeoutFuture};
 use wasm_bindgen::{
     convert::FromWasmAbi, describe::WasmDescribe, prelude::wasm_bindgen, JsCast, JsValue,
-    UnwrapThrowExt,
 };
 
 use crate::{
@@ -16,9 +15,9 @@ use crate::{
 };
 
 use web_sys::{
-    console::log_1, Document, Event, HtmlButtonElement, HtmlDivElement, HtmlElement,
-    HtmlInputElement, HtmlLiElement, HtmlOptionElement, HtmlSelectElement, HtmlSpanElement,
-    HtmlStyleElement, HtmlUListElement, NodeList,
+    console::log_1, Document, Element, Event, EventInit, EventTarget, HtmlButtonElement,
+    HtmlDivElement, HtmlElement, HtmlInputElement, HtmlLiElement, HtmlOptionElement,
+    HtmlSelectElement, HtmlSpanElement, HtmlStyleElement, HtmlUListElement,
 };
 
 use super::Exporter;
@@ -55,64 +54,101 @@ impl FromWasmAbi for Args {
     }
 }
 
-fn get_selected_from_timeline(timeline: &HtmlDivElement) -> String {
-    let selects = timeline
-        .query_selector_all("select")
-        .expect("Timeline should contain selects");
-
-    let mut selected = String::new();
-
-    for s in selects.values() {
-        let s = s.unwrap().dyn_into::<HtmlSelectElement>().unwrap();
-        let options = s.query_selector_all("option").unwrap();
-
-        selected += options
-            .get(s.selected_index().try_into().unwrap())
-            .unwrap()
-            .dyn_into::<HtmlOptionElement>()
-            .unwrap()
-            .text()
-            .as_str();
-    }
-    selected
+/// A row of the time table to export: the name displayed in Progessi and the
+/// value (in days) for each day of the month.
+struct Line {
+    name: String,
+    days: HashMap<u32, f64>,
 }
 
-fn get_timelines(document: &Document) -> NodeList {
+fn sleep(ms: u32) -> TimeoutFuture {
+    TimeoutFuture::new(ms)
+}
+
+/// Progessi renders its timesheet with Vue, asynchronously: poll until the
+/// element is available.
+async fn wait_for(document: &Document, selector: &str) -> Option<Element> {
+    for _ in 0..200 {
+        if let Some(element) = document.query_selector(selector).unwrap() {
+            return Some(element);
+        }
+        sleep(50).await;
+    }
+    None
+}
+
+fn dispatch(target: &EventTarget, name: &str) {
+    let init = EventInit::new();
+    init.set_bubbles(true);
+    let event =
+        Event::new_with_event_init_dict(name, &init).expect("Event should be created successfully");
+    let _ = target.dispatch_event(&event);
+}
+
+fn meta_selector(key: &str) -> String {
+    format!(".tsv2-line-meta[data-line-key=\"{key}\"]")
+}
+
+fn get_line_keys(document: &Document) -> Vec<String> {
     document
-        .query_selector_all(".fc-timeline")
-        .expect("Timelines should be available")
+        .query_selector_all(".tsv2-line-meta[data-line-key]")
+        .expect("Lines should be available")
+        .values()
+        .into_iter()
+        .filter_map(|e| {
+            e.unwrap()
+                .dyn_into::<Element>()
+                .unwrap()
+                .get_attribute("data-line-key")
+        })
+        .collect()
 }
 
-fn get_missing_timelines(
-    timelines: &NodeList,
-    rows: &[Work],
-    display: &HashMap<String, String>,
-) -> Vec<Work> {
-    let mut rows = rows.to_owned();
+fn get_select(document: &Document, key: &str, class: &str) -> Option<HtmlSelectElement> {
+    document
+        .query_selector(&format!("{} select.{class}", meta_selector(key)))
+        .unwrap()
+        .map(|e| e.dyn_into::<HtmlSelectElement>().unwrap())
+}
 
-    for row in &mut rows {
-        *row = Work::new(
-            display
-                .get(row.to_string().as_str())
-                .unwrap_or(&row.to_string())
-                .clone(),
-        );
+fn get_selected_text(select: &HtmlSelectElement) -> String {
+    match usize::try_from(select.selected_index()) {
+        Ok(i) => get_options_from_select(select)
+            .get(i)
+            .cloned()
+            .unwrap_or_default(),
+        Err(_) => String::new(),
+    }
+}
+
+/// Name of a line: selected project followed by the selected phase, if any.
+/// Empty when no project is selected.
+fn get_line_name(document: &Document, key: &str) -> String {
+    let Some(project) = get_select(document, key, "proj__select") else {
+        return String::new();
+    };
+    if project.value().is_empty() {
+        return String::new();
     }
 
-    for timeline in timelines.values() {
-        let timeline = timeline
-            .expect("Should get a timeline")
-            .dyn_into::<HtmlDivElement>()
-            .expect("Timeline should be a div element");
-        let name = get_selected_from_timeline(&timeline).to_lowercase();
-        for i in 0..rows.len() {
-            if name.contains(&rows[i].to_string().to_lowercase()) {
-                rows.remove(i);
-                break;
-            }
+    let mut name = get_selected_text(&project);
+    if let Some(phase) = get_select(document, key, "tsv2-phase-select") {
+        name += " ";
+        name += &get_selected_text(&phase);
+    }
+    name
+}
+
+fn get_missing_lines(document: &Document, names: &[String]) -> Vec<String> {
+    let mut names = names.to_owned();
+
+    for key in get_line_keys(document) {
+        let name = get_line_name(document, &key);
+        if let Some(i) = names.iter().position(|n| name.contains(&n.to_lowercase())) {
+            names.remove(i);
         }
     }
-    rows
+    names
 }
 
 fn get_options_from_select(select: &HtmlSelectElement) -> Vec<String> {
@@ -131,95 +167,139 @@ fn get_options_from_select(select: &HtmlSelectElement) -> Vec<String> {
         .collect()
 }
 
-fn add_timelines(document: &Document, timelines: &Vec<Work>) {
-    let element = document
-        .query_selector(".fc-addcontrol")
-        .expect("element containing add timeline button was not found")
-        .expect("element containing add timeline button was not found")
-        .dyn_into::<HtmlDivElement>()
-        .expect("element should be a div element")
-        .query_selector("button")
-        .expect("timeline button was not found")
-        .expect("timeline button was not found")
+/// Select the first option containing `val` and notify the page. Returns the
+/// selected option text, empty if no option matches.
+fn select_option(select: &HtmlSelectElement, val: &str) -> String {
+    let val = val.to_lowercase();
+    for (i, s) in get_options_from_select(select).iter().enumerate() {
+        if s.contains(&val) {
+            select.set_selected_index(i.try_into().unwrap());
+            dispatch(select, "change");
+            return s.clone();
+        }
+    }
+    String::new()
+}
+
+/// Return the key of a line without project, adding one if needed.
+async fn get_empty_line(document: &Document) -> Option<String> {
+    let keys = get_line_keys(document);
+    if let Some(key) = keys.iter().find(|k| get_line_name(document, k).is_empty()) {
+        return Some(key.clone());
+    }
+
+    let button = document
+        .query_selector(".tsv2-line-table__toolbar--top button.tsv2-btn--dash")
+        .expect("add line button query was not valid")
+        .expect("add line button was not found")
         .dyn_into::<HtmlButtonElement>()
         .expect("failed to cast to button");
 
-    if Some("Ajouter une ligne".to_string()) != element.text_content() {
+    if !button
+        .text_content()
+        .unwrap_or_default()
+        .contains("Ajouter une ligne")
+    {
         panic!("We should find the button called 'Ajouter une ligne'")
     }
 
-    for val in timelines {
-        element.click();
+    button.click();
 
-        // get first selector without value then get the timeline from it
-        let timeline = document
-            .query_selector("div.table-cell-workeffort > select:nth-child(1) > option[value=\"?\"]")
-            .unwrap()
-            .unwrap()
-            .closest(".fc-timeline")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<HtmlDivElement>()
-            .expect("Timeline should be a div element");
-
-        let selects = timeline
-            .query_selector_all("div.table-cell-workeffort > select")
-            .unwrap();
-
-        let s0 = selects
-            .get(0)
-            .expect("First select should be available")
-            .dyn_into::<HtmlSelectElement>()
-            .expect("Node should be a select");
-
-        let o0 = get_options_from_select(&s0);
-        let mut selected = String::new();
-        for (i, s) in o0.iter().enumerate() {
-            if s.contains(&val.to_string().to_lowercase()) {
-                s0.set_selected_index(i.try_into().unwrap());
-                let event = Event::new("change").expect("Event should be created successfully");
-                let _ = s0.dispatch_event(&event);
-                selected = s.clone();
-                break;
-            }
+    for _ in 0..40 {
+        sleep(50).await;
+        if let Some(key) = get_line_keys(document)
+            .into_iter()
+            .find(|k| !keys.contains(k))
+        {
+            return Some(key);
         }
+    }
+    None
+}
 
-        if !selected.is_empty() && !selected.contains("Activité interne") {
+async fn add_lines(document: &Document, names: &[String]) {
+    for val in names {
+        let Some(key) = get_empty_line(document).await else {
+            log!("failed to add a line for {}", val);
+            continue;
+        };
+
+        let project =
+            get_select(document, &key, "proj__select").expect("Project select should be available");
+
+        let selected = select_option(&project, val);
+        if !selected.is_empty() && !selected.contains("activité interne") {
             continue;
         }
 
         if selected.is_empty() {
-            // set activité interne in the first select
-            for (i, s) in o0.iter().enumerate() {
-                if s.contains("activité interne") {
-                    s0.set_selected_index(i.try_into().unwrap());
-                    let event = Event::new("change").expect("Event should be created successfully");
-                    let _ = s0.dispatch_event(&event);
-                    break;
-                }
-            }
+            select_option(&project, "activité interne");
+        }
 
-            let s1 = selects
-                .get(1)
-                .expect("Second select (for Activité interne) should be available")
-                .dyn_into::<HtmlSelectElement>()
-                .expect("Node should be a select");
+        let phase = wait_for(
+            document,
+            &format!("{} select.tsv2-phase-select", meta_selector(&key)),
+        )
+        .await
+        .map(|e| e.dyn_into::<HtmlSelectElement>().unwrap());
 
-            let o1 = get_options_from_select(&s1);
-            let mut selected = String::new();
-            for (i, s) in o1.iter().enumerate() {
-                if s.contains(&val.to_string().to_lowercase()) {
-                    s1.set_selected_index(i.try_into().unwrap());
-                    let event = Event::new("change").expect("Event should be created successfully");
-                    let _ = s1.dispatch_event(&event);
-                    selected = s.clone();
-                    break;
-                }
-            }
+        if phase
+            .map(|p| select_option(&p, val))
+            .unwrap_or_default()
+            .is_empty()
+        {
+            log!("time line not found for {}", val);
+        }
+    }
+}
 
-            if selected.is_empty() {
-                log!("time line not found for {}", val);
-            }
+fn fill_line(document: &Document, key: &str, days: &HashMap<u32, f64>) {
+    let inputs = document
+        .query_selector_all(&format!(
+            "input.tsv2-line-cell__input[data-line-key=\"{key}\"]"
+        ))
+        .expect("Lines should have days");
+
+    for input in inputs.values() {
+        let input = input
+            .unwrap()
+            .dyn_into::<HtmlInputElement>()
+            .expect("Day should be an input");
+
+        let day = input
+            .get_attribute("data-day-idx")
+            .expect("Day should have an index")
+            .parse::<u32>()
+            .expect("Day index should be cast to integer")
+            + 1;
+
+        let value = days.get(&day).copied().unwrap_or_default();
+        let current = input.value();
+        if (value == 0.0 && current.is_empty()) || current == value.to_string() {
+            continue;
+        }
+
+        input.set_value(&value.to_string());
+        dispatch(&input, "input");
+        dispatch(&input, "change");
+        let _ = input.blur();
+    }
+}
+
+async fn fill(document: Document, lines: Vec<Line>) {
+    let names: Vec<String> = lines.iter().map(|l| l.name.clone()).collect();
+    let missing = get_missing_lines(&document, &names);
+
+    log!("missing {:?}", missing);
+    add_lines(&document, &missing).await;
+
+    for key in get_line_keys(&document) {
+        let name = get_line_name(&document, &key);
+        if name.is_empty() {
+            continue;
+        }
+        if let Some(line) = lines.iter().find(|l| name.contains(&l.name.to_lowercase())) {
+            fill_line(&document, &key, &line.days);
         }
     }
 }
@@ -235,81 +315,26 @@ impl<'a> Exporter<'a> for Progessi {
         table: &Self::Table,
         display: &HashMap<String, String>,
     ) -> Result<(), Box<dyn Error>> {
-        let timelines = get_timelines(&self.document);
+        let lines = table
+            .row_headers()
+            .map(|h| Line {
+                name: display
+                    .get(h.to_string().as_str())
+                    .unwrap_or(&h.to_string())
+                    .clone(),
+                days: (1..=31)
+                    .filter_map(|day| {
+                        let date = Utc
+                            .with_ymd_and_hms(self.start.year(), self.start.month(), day, 0, 0, 0)
+                            .single()?;
+                        Some((day, f64::from(table.get(h.clone(), date)) / 100.0))
+                    })
+                    .collect(),
+            })
+            .collect();
 
-        let row_headers: Vec<Work> = table.row_headers().cloned().collect();
-        let missing = get_missing_timelines(&timelines, &row_headers, display);
-
-        log!("missing {:?}", missing);
-        add_timelines(&self.document, &missing);
-
-        let timelines = get_timelines(&self.document);
-        for timeline in timelines.values() {
-            let timeline = timeline
-                .expect("Should get a timeline")
-                .dyn_into::<HtmlDivElement>()
-                .expect("Timeline should be a div element");
-
-            let name = get_selected_from_timeline(&timeline).to_lowercase();
-
-            for h in &row_headers {
-                if name.contains(
-                    &display
-                        .get(h.to_string().as_str())
-                        .unwrap_or(&h.to_string())
-                        .to_lowercase(),
-                ) {
-                    let days = timeline
-                        .query_selector_all(".dayparent")
-                        .expect("Timelines should have days");
-
-                    for day in days.values() {
-                        let day = day
-                            .expect("Should get a day")
-                            .dyn_into::<HtmlDivElement>()
-                            .expect("Day should be a div element");
-
-                        let header = day
-                            .query_selector(".day-numbers")
-                            .expect("Day should have a header")
-                            .expect("Day should have a header")
-                            .dyn_into::<HtmlDivElement>()
-                            .expect("Day header should be an div")
-                            .text_content()
-                            .expect("Day header should have text")
-                            .parse::<u32>()
-                            .expect("Day number should be cast to integer");
-
-                        let input = day
-                            .query_selector("input")
-                            .expect("Day should have an input")
-                            .expect("Day should have an input")
-                            .dyn_into::<HtmlInputElement>()
-                            .expect("Day should be an input");
-
-                        let mut value: f64 = self.get(table, h.clone(), header).into();
-                        value /= 100.0;
-
-                        input.set_value(value.to_string().as_str());
-                        let event =
-                            Event::new("change").expect("Event should be created successfully");
-                        let _ = input.dispatch_event(&event);
-                    }
-
-                    break;
-                }
-            }
-        }
+        wasm_bindgen_futures::spawn_local(fill(self.document.clone(), lines));
         Ok(())
-    }
-}
-
-impl Progessi {
-    pub fn get(&self, table: &MyTable<u8>, row: Work, day: u32) -> u8 {
-        let day = Utc
-            .with_ymd_and_hms(self.start.year(), self.start.month(), day, 0, 0, 0)
-            .unwrap();
-        table.get(row, day)
     }
 }
 
@@ -461,8 +486,11 @@ impl<'a> Exporter<'a> for ProgessiPreview {
 #[allow(clippy::await_holding_lock)]
 async fn download_entries(handle: Rc<Mutex<ProviderHandle>>) {
     let mut handle = handle.lock().unwrap();
-    handle.download_entries().await.unwrap_throw();
-    handle.process().unwrap_throw();
+    handle
+        .download_entries()
+        .await
+        .expect("Failed to download entries");
+    handle.process().expect("Failed to process entries");
 }
 
 fn create_button(document: &Document, text: &str) -> HtmlButtonElement {
@@ -522,12 +550,12 @@ impl ProgessiHandle {
         let fill = create_button(&document, "Fill time table");
         let preview = create_button(&document, "Preview");
 
-        let element = document
-            .query_selector(".fc-addcontrol")
-            .expect("element in which to add button was not found")
-            .expect("element in which to add button was not found")
-            .dyn_into::<HtmlDivElement>()
-            .expect("should be a div element");
+        let element = wait_for(
+            &document,
+            ".tsv2-line-table__toolbar--top .tsv2-line-table__toolbar-left",
+        )
+        .await
+        .expect("element in which to add button was not found");
 
         let header = document
             .query_selector("span.header-text")
@@ -549,8 +577,11 @@ impl ProgessiHandle {
         let args = Args { start, end, ..args };
 
         let mut handle = ProviderHandle::new(args.clone()).expect("Provider not found");
-        handle.download_entries().await.unwrap_throw();
-        handle.process().unwrap_throw();
+        handle
+            .download_entries()
+            .await
+            .expect("Failed to download entries");
+        handle.process().expect("Failed to process entries");
 
         let handle = Rc::new(Mutex::new(handle));
 
@@ -568,7 +599,9 @@ impl ProgessiHandle {
         };
         let on_click = EventListener::new(&fill, "click", move |_event| {
             let handle = clone.lock().unwrap();
-            handle.export(Box::new(progessi.clone())).unwrap_throw();
+            handle
+                .export(Box::new(progessi.clone()))
+                .expect("Failed to export entries");
         });
         on_click.forget();
 
@@ -576,7 +609,9 @@ impl ProgessiHandle {
         let clone = Rc::clone(&handle);
         let on_click = EventListener::new(&preview, "click", move |_event| {
             let handle = clone.lock().unwrap();
-            handle.export(Box::new(progessi.clone())).unwrap_throw();
+            handle
+                .export(Box::new(progessi.clone()))
+                .expect("Failed to export entries");
         });
         on_click.forget();
 
