@@ -1,7 +1,10 @@
 use std::error::Error;
 use time_tracking_manager::{
     args::parse_args,
-    exporters::{aggregated::Aggregated, console::Console, csv::CSV, sunburstchart::SunburstChart},
+    exporters::{
+        aggregated::Aggregated, console::Console, csv::CSV, summary::Summary,
+        sunburstchart::SunburstChart,
+    },
     provider_handle::ProviderHandle,
 };
 
@@ -18,6 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     handle.export(Box::new(CSV {})).unwrap();
     handle.export(Box::new(SunburstChart {})).unwrap();
     handle.export(Box::new(Aggregated::stdout_output(&exporter_options)))?;
+    handle.export(Box::new(Summary::new(&exporter_options)))?;
 
     Ok(())
 }

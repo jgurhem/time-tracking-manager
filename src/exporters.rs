@@ -2,6 +2,7 @@ pub mod aggregated;
 pub mod console;
 pub mod csv;
 pub mod progessi;
+pub mod summary;
 pub mod sunburstchart;
 
 use std::{collections::HashMap, error::Error, fmt::Display};
