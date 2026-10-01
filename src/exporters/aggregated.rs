@@ -35,7 +35,7 @@ pub struct Aggregated<W: Write> {
     level: AggregationLevel,
 }
 
-fn parse_level(options: &[String]) -> AggregationLevel {
+pub(super) fn parse_level(options: &[String]) -> AggregationLevel {
     options
         .iter()
         .find_map(|o| {
